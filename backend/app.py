@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import asyncio
 import logging
-from contextual import asynccontextmanager
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 from models.database import create_tables, get_db
