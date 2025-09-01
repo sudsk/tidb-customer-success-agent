@@ -6,7 +6,7 @@ load_dotenv()
 
 class Config:
     # TiDB Configuration
-    TIDB_HOST = os.getenv("TIDB_HOST", "gateway01.us-west-2.prod.aws.tidbcloud.com")
+    TIDB_HOST = os.getenv("TIDB_HOST", "gateway01.eu-central-1.prod.aws.tidbcloud.com")
     TIDB_PORT = int(os.getenv("TIDB_PORT", 4000))
     TIDB_USER = os.getenv("TIDB_USER", "your_user")
     TIDB_PASSWORD = os.getenv("TIDB_PASSWORD", "your_password")
