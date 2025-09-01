@@ -26,6 +26,6 @@ class Config:
     
     @property
     def DATABASE_URL(self):
-        return f"mysql+pymysql://{self.TIDB_USER}:{self.TIDB_PASSWORD}@{self.TIDB_HOST}:{self.TIDB_PORT}/{self.TIDB_DATABASE}?ssl_verify_cert=true&ssl_verify_identity=true"
+        return f"mysql+pymysql://{self.TIDB_USER}:{self.TIDB_PASSWORD}@{self.TIDB_HOST}:{self.TIDB_PORT}/{self.TIDB_DATABASE}"
 
 config = Config()
