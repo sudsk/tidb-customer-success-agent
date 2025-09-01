@@ -84,7 +84,7 @@ class AgentActivity(Base):
     urgency_level = Column(String(20), default="medium")  # low, medium, high, critical
     
     status = Column(String(50), default="active")
-    metadata = Column(JSON)
+    activity_metadata = Column(JSON)
     created_at = Column(DateTime, server_default=func.now())
 
 class RetentionPattern(Base):
