@@ -156,7 +156,7 @@ class AutonomousCustomerSuccessAgent:
                 activity_type="intervention_executed",
                 description=f"Autonomous intervention for {customer.name}: {intervention_strategy['strategy']}",
                 urgency_level="high" if customer.churn_probability >= 0.9 else "medium",
-                metadata=json.dumps({
+                activity_metadata=json.dumps({
                     "churn_probability": customer.churn_probability,
                     "revenue_at_risk": customer.annual_contract_value,
                     "intervention_type": intervention_strategy['intervention_type'],
@@ -241,7 +241,7 @@ class AutonomousCustomerSuccessAgent:
             activity_type="self_correction",
             description=f"Self-correcting failed intervention step: {failed_step['type']}",
             urgency_level="high",
-            metadata=json.dumps({
+            activity_metadata=json.dumps({
                 "failed_step": failed_step,
                 "failure_reason": failure_result.get('error', 'Unknown'),
                 "correction_strategy": "alternative_approach"
