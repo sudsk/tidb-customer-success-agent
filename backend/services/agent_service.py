@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from models.database import Customer, ChurnIntervention, AgentActivity, RetentionPattern
 from services.tidb_service import TiDBService
-from services.llm_service import LLMService
+from services.gemini_service import GeminiService
 from services.notification_service import NotificationService
 from services.churn_predictor import ChurnPredictor
 from config import config
@@ -18,7 +18,7 @@ class AutonomousCustomerSuccessAgent:
     def __init__(self, db: Session):
         self.db = db
         self.tidb_service = TiDBService(db)
-        self.llm_service = LLMService()
+        self.gemini_service = GeminiService()
         self.notification_service = NotificationService()
         self.churn_predictor = ChurnPredictor()
         
@@ -117,7 +117,7 @@ class AutonomousCustomerSuccessAgent:
             )
             
             # Step 2: Use LLM to choose optimal intervention strategy
-            intervention_strategy = await self.llm_service.analyze_retention_strategy(
+            intervention_strategy = await self.gemini_service.analyze_retention_strategy(  
                 customer_profile=self._build_customer_profile(customer),
                 churn_probability=customer.churn_probability,
                 similar_cases=similar_cases
