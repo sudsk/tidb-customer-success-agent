@@ -129,18 +129,43 @@ Frontend will run on http://localhost:3000
 - **Database**: TiDB Serverless cluster
 
 ### Deploy Your Own
-1. **Fork this repository**
-2. **Deploy Backend on Railway**:
-   - Connect GitHub repo to Railway
-   - Add environment variables (TiDB credentials, OpenAI key)
-   - Railway auto-deploys on push
-3. **Deploy Frontend on Vercel**:
-   - Connect GitHub repo to Vercel
-   - Set root directory to `frontend`
-   - Add `REACT_APP_API_URL` environment variable
+## 🌐 GCP Cloud Run Deployment
+
+### Prerequisites
+- Google Cloud Account with billing enabled
+- gcloud CLI installed and configured
+- Gemini API key from Google AI Studio
+
+### Deploy Backend
+```bash
+cd backend
+gcloud run deploy customer-success-backend \
+  --source=. \
+  --platform=managed \
+  --region=us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars="TIDB_HOST=your_host,TIDB_USER=your_user,TIDB_PASSWORD=your_pass,GEMINI_API_KEY=your_key"
+```
+
+### Deploy Frontend
+```bash  
+cd frontend
+# Update REACT_APP_API_URL in .env to your backend Cloud Run URL
+gcloud run deploy customer-success-frontend \
+  --source=. \
+  --platform=managed \
+  --region=us-central1 \
+  --allow-unauthenticated
 4. **Configure TiDB Serverless**:
    - Use provided SQL schema in `backend/models/database.py`
    - Agent auto-initializes sample data on first run
+
+### Technology Stack
+- **Frontend**: React + Cloud Run
+- **Backend**: FastAPI + Cloud Run  
+- **Database**: TiDB Serverless
+- **LLM**: Google Gemini 1.5 Flash
+- **Infrastructure**: Google Cloud Platform
 
 ## 🎬 Demo Script (4 Minutes)
 
