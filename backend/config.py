@@ -12,15 +12,16 @@ class Config:
     TIDB_PASSWORD = os.getenv("TIDB_PASSWORD", "your_password")
     TIDB_DATABASE = os.getenv("TIDB_DATABASE", "customer_success_agent")
     
-    # LLM Configuration
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "sk-your-key")
+    # Gemini Configuration (instead of OpenAI)
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "your_gemini_key")
+    
+    # GCP Configuration
+    GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "your-project-id")
     
     # Agent Configuration
     AGENT_UPDATE_INTERVAL = 15  # seconds - faster for customer success
     VECTOR_DIMENSIONS = 768
     CHURN_THRESHOLD = 0.75  # 75% churn probability triggers intervention
-    
-    # Business Configuration
     HIGH_VALUE_THRESHOLD = 10000  # $10K+ annual value = high value customer
     INTERVENTION_TIMEOUT = 300  # 5 minutes to attempt intervention
     
