@@ -60,10 +60,10 @@ const ChurnDashboard = () => {
 
   if (isLoading) {
     return (
-      
-        
-        🤖 Autonomous Customer Success Agent Starting...
-      
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>🤖 Autonomous Customer Success Agent Starting...</p>
+      </div>
     );
   }
 
