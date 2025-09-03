@@ -11,10 +11,7 @@ class Config:
     TIDB_USER = os.getenv("TIDB_USER", "your_user")
     TIDB_PASSWORD = os.getenv("TIDB_PASSWORD", "your_password")
     TIDB_DATABASE = os.getenv("TIDB_DATABASE", "customer_success_agent")
-    
-    # Gemini Configuration (instead of OpenAI)
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "your_gemini_key")
-    
+   
     # GCP Configuration
     GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "your-project-id")
     
