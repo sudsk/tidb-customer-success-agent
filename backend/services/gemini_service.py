@@ -8,8 +8,13 @@ logger = logging.getLogger(__name__)
 
 class GeminiService:
     def __init__(self):
-        genai.configure(api_key=config.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        """Initialize Gemini - GCP handles authentication automatically"""
+        # On Cloud Run, GCP automatically provides credentials
+        # No explicit authentication needed!
+        genai.configure()  # Uses Application Default Credentials automatically
+        
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        logger.info("Gemini initialized with automatic GCP authentication")
     
     async def analyze_retention_strategy(self, customer_profile: Dict, churn_probability: float,
                                        similar_cases: List[Dict]) -> Dict:
