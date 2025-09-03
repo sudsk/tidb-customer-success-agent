@@ -89,4 +89,48 @@ class NotificationService:
             return False
     
     async def schedule_success_call(self, customer_name: str, customer_phone: str,
-                                  customer_timezone: str, urgency: str, talking_points: List[str]) -># TiDB Autonomous Customer Success Agent - Complete MVP
+                                  customer_timezone: str, urgency: str, talking_points: List[str]) -> bool:
+        """Schedule customer success call with talking points"""
+        try:
+            await asyncio.sleep(0.5)
+            
+            logger.info(f"📅 Success call scheduled for {customer_name} (Urgency: {urgency})")
+            logger.info(f"Talking points: {', '.join(talking_points)}")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Success call scheduling failed: {e}")
+            return False
+    
+    async def schedule_feature_demo(self, customer_email: str, customer_name: str,
+                                  demo_focus: str, feature_usage_score: float) -> bool:
+        """Schedule personalized feature demonstration"""
+        try:
+            await asyncio.sleep(0.4)
+            
+            subject = f"Personalized feature demo for {customer_name}"
+            content = f"""
+            Hi {customer_name},
+            
+            I'd love to show you some powerful features that could immediately boost your results.
+            
+            🚀 Demo Focus: {demo_focus}
+            
+            Based on your current usage patterns (score: {feature_usage_score:.1f}), I have specific recommendations that could save you hours each week.
+            
+            Are you available for a 20-minute screen share this week?
+            
+            Best regards,
+            Your Success Team
+            """
+            
+            success = await self.send_email(customer_email, subject, content)
+            if success:
+                logger.info(f"🎥 Feature demo scheduled: {demo_focus}")
+                
+            return success
+            
+        except Exception as e:
+            logger.error(f"Feature demo scheduling failed: {e}")
+            return False
