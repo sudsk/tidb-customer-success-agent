@@ -6,7 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class GeminiService:
+class LLMService:
     def __init__(self):
         """Initialize Gemini - GCP handles authentication automatically"""
         # On Cloud Run, GCP automatically provides credentials
