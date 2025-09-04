@@ -1,7 +1,7 @@
 /* frontend/src/styles/Dashboard.css */
 .churn-dashboard {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
   color: white;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
