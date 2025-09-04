@@ -678,3 +678,220 @@
 .danger-highlight {
   animation: danger-pulse 2s ease-in-out infinite;
 }
+
+/* Additional CSS for enhanced visual feedback */
+
+/* Button States */
+.trigger-button.running {
+  background: linear-gradient(135deg, #10b981, #059669);
+  transform: scale(0.95);
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+}
+
+.trigger-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+/* Spinning loader */
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Status indicator running state */
+.status-indicator.running {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+.status-indicator.running .status-dot {
+  background: #10b981;
+  animation: pulse 1s infinite, glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from { box-shadow: 0 0 5px rgba(16, 185, 129, 0.5); }
+  to { box-shadow: 0 0 20px rgba(16, 185, 129, 0.8); }
+}
+
+/* Save counter flash */
+.recent-saves {
+  margin-top: 0.5rem;
+}
+
+.save-flash {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 15px;
+  animation: flash-in 0.5s ease-out;
+}
+
+@keyframes flash-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-5px) scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* New activity animation */
+.new-activity {
+  animation: slide-in-highlight 0.8s ease-out;
+  border-left: 4px solid #10b981 !important;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05));
+}
+
+@keyframes slide-in-highlight {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+    background: rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(5px);
+    background: rgba(16, 185, 129, 0.3);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05));
+  }
+}
+
+/* Activity icon states */
+.activity-icon.executing {
+  color: #10b981;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Customer card rescue state */
+.customer-card.being-rescued {
+  border-left: 4px solid #10b981 !important;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+  animation: rescue-glow 2s ease-in-out;
+  position: relative;
+}
+
+.rescue-indicator {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: #10b981;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes rescue-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-180deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2) rotate(-90deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Enhanced KPI animations */
+.kpi-value {
+  transition: all 0.3s ease;
+}
+
+.kpi-card:hover .kpi-value {
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+  transform: scale(1.05);
+}
+
+/* Status running animation */
+.status-dot.running {
+  animation: pulse 0.8s ease-in-out infinite, scale-pulse 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes scale-pulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.2); }
+}
+
+/* Loading states for activity feed */
+.activity-feed.loading {
+  position: relative;
+}
+
+.activity-feed.loading::after {
+  content: '🤖 Agent processing...';
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  animation: fade-in 0.5s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Real-time indicator enhancements */
+.activity-status.processing {
+  animation: processing-glow 2s ease-in-out infinite;
+}
+
+@keyframes processing-glow {
+  0%, 100% {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+  }
+  50% {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.5);
+  }
+}
+
+/* Counter increment animation */
+@keyframes counter-increment {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); color: #10b981; text-shadow: 0 0 20px rgba(16, 185, 129, 0.8); }
+  100% { transform: scale(1); }
+}
+
+.counter-value.incremented {
+  animation: counter-increment 0.8s ease-out;
+}
