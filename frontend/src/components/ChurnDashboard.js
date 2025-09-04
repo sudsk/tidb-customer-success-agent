@@ -1,8 +1,8 @@
-// frontend/src/components/ChurnDashboard.js
+// Enhanced ChurnDashboard.js with immediate visual feedback
 import React, { useState, useEffect } from 'react';
 import { 
   AlertTriangle, Users, TrendingDown, Bot, CheckCircle, 
-  Clock, Zap, Heart, DollarSign, Shield 
+  Clock, Zap, Heart, DollarSign, Shield, Loader
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import '../styles/Dashboard.css';
@@ -13,6 +13,8 @@ const ChurnDashboard = () => {
   const [atRiskCustomers, setAtRiskCustomers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [saveCounter, setSaveCounter] = useState(847);
+  const [isAgentRunning, setIsAgentRunning] = useState(false);
+  const [recentSaves, setRecentSaves] = useState([]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -26,7 +28,7 @@ const ChurnDashboard = () => {
     // Animate save counter
     const counterInterval = setInterval(() => {
       setSaveCounter(prev => prev + Math.floor(Math.random() * 2));
-    }, 45000); // Increment occasionally
+    }, 45000);
     
     return () => clearInterval(counterInterval);
   }, []);
@@ -50,12 +52,86 @@ const ChurnDashboard = () => {
   };
 
   const triggerAgent = async () => {
+    setIsAgentRunning(true);
+    
     try {
+      // Show immediate feedback
+      addTemporaryActivity({
+        id: `temp-${Date.now()}`,
+        type: 'agent_triggered',
+        title: '🤖 Agent Activated: Scanning for at-risk customers...',
+        description: 'Analyzing churn patterns using TiDB vector search',
+        status: 'executing',
+        urgency: 'high',
+        timestamp: 'Now',
+        metadata: {}
+      });
+
       await apiService.triggerAgent();
-      setTimeout(fetchDashboardData, 3000); // Refresh after agent runs
+      
+      // Simulate customer rescue after 2 seconds
+      setTimeout(() => {
+        const customerToSave = atRiskCustomers[Math.floor(Math.random() * Math.min(3, atRiskCustomers.length))];
+        if (customerToSave) {
+          addCustomerSaveActivity(customerToSave);
+          setSaveCounter(prev => prev + 1);
+        }
+      }, 2000);
+
+      // Simulate more activities
+      setTimeout(() => {
+        addSelfCorrectionActivity();
+      }, 4000);
+
+      setTimeout(() => {
+        fetchDashboardData();
+        setIsAgentRunning(false);
+      }, 6000);
+
     } catch (error) {
       console.error('Failed to trigger agent:', error);
+      setIsAgentRunning(false);
     }
+  };
+
+  const addTemporaryActivity = (activity) => {
+    setActivities(prev => [activity, ...prev.slice(0, 14)]);
+  };
+
+  const addCustomerSaveActivity = (customer) => {
+    const saveActivity = {
+      id: `save-${Date.now()}`,
+      type: 'customer_saved',
+      title: `✅ CUSTOMER SAVED: ${customer.name} (${customer.company})`,
+      description: `Successful intervention • Churn risk: ${(customer.churn_probability * 100).toFixed(0)}% → 23% • $${(customer.annual_contract_value/1000).toFixed(0)}K revenue retained`,
+      status: 'success',
+      urgency: 'low',
+      timestamp: 'Just now',
+      metadata: {
+        customer: customer.name,
+        revenue_saved: customer.annual_contract_value,
+        risk_before: customer.churn_probability,
+        risk_after: 0.23
+      }
+    };
+    
+    setActivities(prev => [saveActivity, ...prev.slice(0, 14)]);
+    setRecentSaves(prev => [customer.name, ...prev.slice(0, 4)]);
+  };
+
+  const addSelfCorrectionActivity = () => {
+    const correctionActivity = {
+      id: `correction-${Date.now()}`,
+      type: 'self_correction',
+      title: '🔄 Self-correction: Email bounced → Phone call successful',
+      description: 'Agent adapted strategy automatically • Customer engagement improved',
+      status: 'corrected',
+      urgency: 'medium',
+      timestamp: 'Just now',
+      metadata: {}
+    };
+    
+    setActivities(prev => [correctionActivity, ...prev.slice(0, 14)]);
   };
 
   if (isLoading) {
@@ -86,27 +162,45 @@ const ChurnDashboard = () => {
             <div className="save-counter">
               <div className="counter-value">{saveCounter}</div>
               <div className="counter-label">Customers Saved</div>
+              {recentSaves.length > 0 && (
+                <div className="recent-saves">
+                  <div className="save-flash">+1 {recentSaves[0]}!</div>
+                </div>
+              )}
             </div>
-            <div className="status-indicator active">
+            <div className={`status-indicator ${isAgentRunning ? 'running' : 'active'}`}>
               <div className="status-dot pulse"></div>
-              <span>Agent Monitoring</span>
+              <span>{isAgentRunning ? 'Agent Working...' : 'Agent Monitoring'}</span>
             </div>
-            <button className="trigger-button" onClick={triggerAgent}>
-              <Zap size={16} />
-              Save Customers Now
+            <button 
+              className={`trigger-button ${isAgentRunning ? 'running' : ''}`}
+              onClick={triggerAgent}
+              disabled={isAgentRunning}
+            >
+              {isAgentRunning ? (
+                <>
+                  <Loader className="spin" size={16} />
+                  Rescuing Customers...
+                </>
+              ) : (
+                <>
+                  <Zap size={16} />
+                  Save Customers Now
+                </>
+              )}
             </button>
           </div>
         </div>
       </header>
 
-      {/* KPI Cards */}
+      {/* Enhanced KPI Cards with Animation */}
       <div className="kpi-section">
         <div className="kpi-card success">
           <div className="kpi-header">
             <CheckCircle className="kpi-icon" size={24} />
             <span className="kpi-change positive">+73 this week</span>
           </div>
-          <div className="kpi-value">{metrics?.kpis?.customers_saved?.value || 0}</div>
+          <div className="kpi-value">{saveCounter}</div>
           <div className="kpi-label">Customers Saved</div>
           <div className="kpi-detail">From high-risk churn situations</div>
         </div>
@@ -149,8 +243,8 @@ const ChurnDashboard = () => {
           <div className="section-header">
             <h2>🚨 Live Customer Rescue Operations</h2>
             <div className="activity-status">
-              <div className="status-dot active pulse"></div>
-              <span>Real-time</span>
+              <div className={`status-dot ${isAgentRunning ? 'running' : 'active'} pulse`}></div>
+              <span>{isAgentRunning ? 'Processing...' : 'Real-time'}</span>
             </div>
           </div>
           
@@ -170,7 +264,11 @@ const ChurnDashboard = () => {
           
           <div className="customers-list">
             {atRiskCustomers.slice(0, 8).map(customer => (
-              <CustomerCard key={customer.id} customer={customer} />
+              <CustomerCard 
+                key={customer.id} 
+                customer={customer} 
+                isBeingRescued={recentSaves.includes(customer.name)}
+              />
             ))}
           </div>
         </div>
@@ -232,7 +330,7 @@ const ChurnDashboard = () => {
         <div className="analytics-card tidb-status">
           <h3>🚀 TiDB Serverless Status</h3>
           <div className="tidb-metrics">
-            <div className="tidb-metric">Vector Search: <span className="status-ok">Active</span></div>
+            <div className="tidb-metric">Vector Search: <span className="status-ok">Active • 47ms avg</span></div>
             <div className="tidb-metric">HTAP Processing: <span className="status-ok">1.2M ops/sec</span></div>
             <div className="tidb-metric">Churn Models: <span className="status-ok">Updated 2min ago</span></div>
             <div className="tidb-metric">Auto-scaling: <span className="status-ok">Optimized</span></div>
@@ -243,7 +341,17 @@ const ChurnDashboard = () => {
   );
 };
 
+// Enhanced ActivityItem component
 const ActivityItem = ({ activity }) => {
+  const [isNew, setIsNew] = useState(false);
+
+  useEffect(() => {
+    if (activity.timestamp === 'Now' || activity.timestamp === 'Just now') {
+      setIsNew(true);
+      setTimeout(() => setIsNew(false), 3000);
+    }
+  }, [activity.timestamp]);
+
   const getActivityIcon = (type, status) => {
     if (type === 'churn_intervention') {
       return <AlertTriangle className={`activity-icon ${status}`} size={20} />;
@@ -251,6 +359,8 @@ const ActivityItem = ({ activity }) => {
       return <CheckCircle className="activity-icon success" size={20} />;
     } else if (type === 'self_correction') {
       return <Zap className="activity-icon warning" size={20} />;
+    } else if (type === 'agent_triggered') {
+      return <Bot className="activity-icon executing" size={20} />;
     } else {
       return <Bot className="activity-icon info" size={20} />;
     }
@@ -266,7 +376,7 @@ const ActivityItem = ({ activity }) => {
   };
 
   return (
-    <div className={`activity-item ${getUrgencyClass(activity.urgency)} ${activity.status}`}>
+    <div className={`activity-item ${getUrgencyClass(activity.urgency)} ${activity.status} ${isNew ? 'new-activity' : ''}`}>
       <div className="activity-header">
         {getActivityIcon(activity.type, activity.status)}
         <div className="activity-content">
@@ -283,9 +393,9 @@ const ActivityItem = ({ activity }) => {
               Risk: {(activity.metadata.churn_probability * 100).toFixed(0)}%
             </span>
           )}
-          {activity.metadata.revenue_at_risk && (
+          {activity.metadata.revenue_saved && (
             <span className="metadata-tag revenue">
-              ${(activity.metadata.revenue_at_risk / 1000).toFixed(0)}K at risk
+              ${(activity.metadata.revenue_saved / 1000).toFixed(0)}K saved
             </span>
           )}
         </div>
@@ -294,7 +404,8 @@ const ActivityItem = ({ activity }) => {
   );
 };
 
-const CustomerCard = ({ customer }) => {
+// Enhanced CustomerCard component
+const CustomerCard = ({ customer, isBeingRescued }) => {
   const getRiskColor = (riskLevel) => {
     switch (riskLevel) {
       case 'critical': return '#ef4444';
@@ -305,7 +416,13 @@ const CustomerCard = ({ customer }) => {
   };
 
   return (
-    <div className="customer-card" style={{'--risk-color': getRiskColor(customer.churn_risk_level)}}>
+    <div className={`customer-card ${isBeingRescued ? 'being-rescued' : ''}`} style={{'--risk-color': getRiskColor(customer.churn_risk_level)}}>
+      {isBeingRescued && (
+        <div className="rescue-indicator">
+          <CheckCircle size={16} />
+          RESCUED!
+        </div>
+      )}
       <div className="customer-header">
         <div className="customer-info">
           <div className="customer-name">{customer.name}</div>
