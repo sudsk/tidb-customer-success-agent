@@ -1,4 +1,4 @@
-// frontend/src/components/ChurnDashboard.js - Corrected Version
+// Fixed ChurnDashboard.js with persistent demo activities
 import React, { useState, useEffect } from 'react';
 import { 
   AlertTriangle, Users, TrendingDown, Bot, CheckCircle, 
@@ -15,6 +15,7 @@ const ChurnDashboard = () => {
   const [saveCounter, setSaveCounter] = useState(847);
   const [isAgentRunning, setIsAgentRunning] = useState(false);
   const [recentSaves, setRecentSaves] = useState([]);
+  const [demoActivities, setDemoActivities] = useState([]); // Store demo activities separately
 
   useEffect(() => {
     fetchDashboardData();
@@ -42,7 +43,12 @@ const ChurnDashboard = () => {
       ]);
       
       setMetrics(metricsData);
-      setActivities(activitiesData.activities);
+      
+      // FIXED: Merge demo activities with backend activities instead of replacing
+      const backendActivities = activitiesData.activities || [];
+      const mergedActivities = [...demoActivities, ...backendActivities].slice(0, 25); // Keep last 25
+      setActivities(mergedActivities);
+      
       setAtRiskCustomers(customersData.customers);
       setIsLoading(false);
     } catch (error) {
@@ -52,7 +58,14 @@ const ChurnDashboard = () => {
   };
 
   const addTemporaryActivity = (activity) => {
-    setActivities(prev => [activity, ...prev.slice(0, 14)]);
+    // Add to demo activities to persist across refreshes
+    setDemoActivities(prev => {
+      const newDemoActivities = [activity, ...prev].slice(0, 15); // Keep last 15 demo activities
+      return newDemoActivities;
+    });
+    
+    // Also update main activities for immediate display
+    setActivities(prev => [activity, ...prev.slice(0, 24)]);
   };
 
   const addCustomerSaveActivity = (customer) => {
@@ -72,7 +85,7 @@ const ChurnDashboard = () => {
       }
     };
     
-    setActivities(prev => [saveActivity, ...prev.slice(0, 14)]);
+    addTemporaryActivity(saveActivity);
     setRecentSaves(prev => [customer.name, ...prev.slice(0, 4)]);
   };
 
@@ -88,7 +101,7 @@ const ChurnDashboard = () => {
       metadata: {}
     };
     
-    setActivities(prev => [correctionActivity, ...prev.slice(0, 14)]);
+    addTemporaryActivity(correctionActivity);
   };
 
   const triggerAgent = async () => {
@@ -152,7 +165,7 @@ const ChurnDashboard = () => {
       }, 4500);
 
       setTimeout(() => {
-        fetchDashboardData();
+        fetchDashboardData(); // This will now merge instead of replace
         setIsAgentRunning(false);
       }, 6000);
 
@@ -160,6 +173,12 @@ const ChurnDashboard = () => {
       console.error('Failed to trigger agent:', error);
       setIsAgentRunning(false);
     }
+  };
+
+  // Clear demo activities function (optional - for testing)
+  const clearDemoActivities = () => {
+    setDemoActivities([]);
+    fetchDashboardData();
   };
 
   if (isLoading) {
@@ -276,6 +295,25 @@ const ChurnDashboard = () => {
             <div className="activity-status">
               <div className={`status-dot ${isAgentRunning ? 'running' : 'active'} pulse`}></div>
               <span>{isAgentRunning ? 'Processing...' : 'Real-time'}</span>
+              {/* Optional: Add clear button for testing */}
+              {demoActivities.length > 0 && (
+                <button 
+                  className="clear-demo-btn"
+                  onClick={clearDemoActivities}
+                  style={{
+                    marginLeft: '1rem',
+                    padding: '0.25rem 0.5rem',
+                    fontSize: '0.75rem',
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Clear Demo ({demoActivities.length})
+                </button>
+              )}
             </div>
           </div>
           
@@ -537,7 +575,7 @@ const TiDBFeaturesPanel = () => {
   );
 };
 
-// Activity Item Component
+// Activity Item Component (same as before)
 const ActivityItem = ({ activity }) => {
   const [isNew, setIsNew] = useState(false);
 
@@ -625,7 +663,7 @@ const ActivityItem = ({ activity }) => {
   );
 };
 
-// Customer Card Component
+// Customer Card Component (same as before)
 const CustomerCard = ({ customer, isBeingRescued }) => {
   const getRiskColor = (riskLevel) => {
     switch (riskLevel) {
