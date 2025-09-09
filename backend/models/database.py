@@ -101,9 +101,39 @@ class RetentionPattern(Base):
     churn_reason_category = Column(String(100))  # pricing, features, support, competition
     
     embedding = Column(JSON)  # Vector representation for similarity search
+    graph_relationships = Column(JSON)
+    memory_references = Column(JSON)
+    
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
+class AgentMemory(Base):
+    __tablename__ = "agent_memory"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String(255), nullable=False)
+    customer_id = Column(Integer, nullable=False)
+    interaction_type = Column(String(100), nullable=False)
+    context = Column(JSON, nullable=False)
+    outcome = Column(String(100), nullable=False)
+    timestamp = Column(DateTime, server_default=func.now())
+    embedding = Column(JSON)
+    
+    created_at = Column(DateTime, server_default=func.now())
+
+class CustomerCommunication(Base):
+    __tablename__ = "customer_communications"
+    
+    communication_id = Column(Integer, primary_key=True, index=True)
+    customer_id = Column(Integer, nullable=False)
+    message_content = Column(Text, nullable=False)
+    communication_type = Column(String(50), nullable=False)  # email, phone, chat
+    timestamp = Column(DateTime, server_default=func.now())
+    sentiment_score = Column(Float, default=0.0)
+    communication_direction = Column(String(20), default='inbound')  # inbound/outbound
+    
+    created_at = Column(DateTime, server_default=func.now())
+    
 def create_tables():
     Base.metadata.create_all(bind=engine)
 
