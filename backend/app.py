@@ -31,6 +31,10 @@ async def lifespan(app: FastAPI):
     db = next(get_db())
     await initialize_customer_data(db)
     
+    # Initialize enhanced TiDB features
+    from utils.mock_data import create_tidb_enhanced_tables
+    await create_tidb_enhanced_tables(db)
+    
     # Start background agent
     global agent_task
     agent_task = asyncio.create_task(run_agent_loop())
