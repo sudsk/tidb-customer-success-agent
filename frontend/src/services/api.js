@@ -38,4 +38,9 @@ export const apiService = {
     const response = await axios.post(`${API_BASE}/agent/trigger`);
     return response.data;
   }
+
+  async getTiDBFeaturesDemo() {
+    const response = await axios.get(`${API_BASE}/tidb/features-demo`);
+    return response.data;
+  }
 };
