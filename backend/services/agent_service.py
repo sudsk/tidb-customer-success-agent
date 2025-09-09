@@ -539,3 +539,164 @@ class AutonomousCustomerSuccessAgent:
             "recovery_action": "logged_for_manual_review",
             "timestamp": datetime.now().isoformat()
         }
+
+    async def execute_enhanced_intervention(self, customer: Customer) -> Optional[Dict]:
+        """Enhanced intervention with memory, full-text search, and graph RAG"""
+        
+        try:
+            # Step 1: Retrieve agent memory for similar cases
+            context_embedding = customer.behavior_embedding or [0.0] * 768
+            agent_memories = await self.tidb_service.retrieve_agent_memory(
+                customer_id=customer.id,
+                interaction_type="churn_intervention",
+                context_embedding=context_embedding,
+                limit=3
+            )
+            
+            # Step 2: Full-text search through customer communications
+            churn_factors = ["billing", "support", "feature", "competitor"]
+            communications = []
+            for factor in churn_factors:
+                comms = await self.tidb_service.full_text_search_communications(
+                    customer_id=customer.id,
+                    search_terms=factor
+                )
+                communications.extend(comms)
+            
+            # Step 3: Graph RAG - find relationship patterns
+            relationships = await self.tidb_service.graph_rag_customer_relationships(customer.id)
+            
+            # Step 4: Enhanced strategy selection using all data sources
+            intervention_strategy = await self.llm_service.analyze_enhanced_retention_strategy(
+                customer_profile=self._build_customer_profile(customer),
+                agent_memories=agent_memories,
+                communications=communications,
+                relationships=relationships,
+                churn_probability=customer.churn_probability
+            )
+            
+            if intervention_strategy['confidence'] < 0.6:
+                logger.info(f"Low confidence enhanced intervention for {customer.name}, skipping")
+                return None
+            
+            # Step 5: Execute intervention
+            intervention = ChurnIntervention(
+                customer_id=customer.id,
+                intervention_type=intervention_strategy['intervention_type'],
+                churn_probability_before=customer.churn_probability,
+                trigger_reason=intervention_strategy['trigger_reason'],
+                strategy_chosen=intervention_strategy['strategy'],
+                confidence_score=intervention_strategy['confidence'],
+                expected_success_rate=intervention_strategy['expected_success_rate'],
+                revenue_at_risk=customer.annual_contract_value,
+                estimated_retention_value=customer.annual_contract_value * intervention_strategy['expected_success_rate'],
+                status="executing",
+                execution_steps=json.dumps(intervention_strategy['execution_plan'])
+            )
+            
+            self.db.add(intervention)
+            self.db.commit()
+            self.db.refresh(intervention)
+            
+            # Step 6: Store this intervention in agent memory
+            memory_context = {
+                "customer_segment": self._get_customer_segment(customer),
+                "churn_probability": customer.churn_probability,
+                "intervention_type": intervention_strategy['intervention_type'],
+                "strategy": intervention_strategy['strategy'],
+                "confidence": intervention_strategy['confidence']
+            }
+            
+            await self.tidb_service.store_agent_memory(
+                customer_id=customer.id,
+                interaction_type="churn_intervention",
+                context=memory_context,
+                outcome="initiated"
+            )
+            
+            # Step 7: Store outbound communication
+            await self.tidb_service.store_customer_communication(
+                customer_id=customer.id,
+                message=f"Initiated {intervention_strategy['strategy']} intervention for churn prevention",
+                comm_type="system",
+                direction="outbound"
+            )
+            
+            return {
+                "type": "enhanced_churn_intervention",
+                "customer": customer.name,
+                "company": customer.company,
+                "churn_probability": customer.churn_probability,
+                "revenue_at_risk": customer.annual_contract_value,
+                "intervention": intervention_strategy['strategy'],
+                "confidence": intervention_strategy['confidence'],
+                "agent_memories_used": len(agent_memories),
+                "communications_analyzed": len(communications),
+                "relationships_found": len(relationships.get('successful_strategies', [])),
+                "intervention_id": intervention.id
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in enhanced intervention for customer {customer.id}: {e}")
+            return None
+    
+    async def demo_populate_sample_data(self):
+        """Populate sample data for demo purposes"""
+        
+        try:
+            # Add sample communications
+            sample_communications = [
+                {
+                    "customer_id": 1,  # Sarah Chen
+                    "message": "I'm having trouble with the billing system. It's confusing and I can't find what I need.",
+                    "comm_type": "email",
+                    "direction": "inbound"
+                },
+                {
+                    "customer_id": 1,
+                    "message": "Considering switching to a competitor. Your support response time is too slow.",
+                    "comm_type": "chat",
+                    "direction": "inbound"
+                },
+                {
+                    "customer_id": 2,  # Mike Rodriguez
+                    "message": "The new features are not intuitive. My team is struggling to adopt them.",
+                    "comm_type": "phone",
+                    "direction": "inbound"
+                }
+            ]
+            
+            for comm in sample_communications:
+                await self.tidb_service.store_customer_communication(**comm)
+            
+            # Add sample agent memories
+            sample_memories = [
+                {
+                    "customer_id": 1,
+                    "interaction_type": "churn_intervention",
+                    "context": {
+                        "segment": "smb",
+                        "issue": "billing_confusion",
+                        "strategy": "personalized_training"
+                    },
+                    "outcome": "successful"
+                },
+                {
+                    "customer_id": 2,
+                    "interaction_type": "churn_intervention", 
+                    "context": {
+                        "segment": "enterprise",
+                        "issue": "feature_adoption",
+                        "strategy": "dedicated_support"
+                    },
+                    "outcome": "successful"
+                }
+            ]
+            
+            for memory in sample_memories:
+                await self.tidb_service.store_agent_memory(**memory)
+            
+            logger.info("✅ Demo sample data populated")
+            
+        except Exception as e:
+            logger.error(f"Error populating demo data: {e}")
