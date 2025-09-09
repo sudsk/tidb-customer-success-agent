@@ -1,4 +1,4 @@
-// Business-focused ChurnDashboard.js - TiDB features integrated into agent workflow
+// Fixed ChurnDashboard.js - Activities now properly persist
 import React, { useState, useEffect } from 'react';
 import { 
   AlertTriangle, Users, TrendingDown, Bot, CheckCircle, 
@@ -25,6 +25,24 @@ const ChurnDashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Watch for changes in demoActivities and merge with backend data
+  useEffect(() => {
+    if (activities.length > 0 || demoActivities.length > 0) {
+      const backendActivities = activities.filter(activity => 
+        !activity.id?.includes('analysis-') && 
+        !activity.id?.includes('strategy-') && 
+        !activity.id?.includes('communication-') && 
+        !activity.id?.includes('save-') && 
+        !activity.id?.includes('correction-') && 
+        !activity.id?.includes('learning-')
+      );
+      const mergedActivities = [...demoActivities, ...backendActivities].slice(0, 25);
+      if (JSON.stringify(mergedActivities) !== JSON.stringify(activities)) {
+        setActivities(mergedActivities);
+      }
+    }
+  }, [demoActivities]);
+
   useEffect(() => {
     // Animate save counter
     const counterInterval = setInterval(() => {
@@ -34,7 +52,7 @@ const ChurnDashboard = () => {
     return () => clearInterval(counterInterval);
   }, []);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (skipActivityMerge = false) => {
     try {
       const [metricsData, activitiesData, customersData] = await Promise.all([
         apiService.getDashboardMetrics(),
@@ -43,13 +61,15 @@ const ChurnDashboard = () => {
       ]);
       
       setMetrics(metricsData);
-      
-      // Merge demo activities with backend activities
-      const backendActivities = activitiesData.activities || [];
-      const mergedActivities = [...demoActivities, ...backendActivities].slice(0, 25);
-      setActivities(mergedActivities);
-      
       setAtRiskCustomers(customersData.customers);
+      
+      // Only merge activities if not skipping (for first load or periodic refresh)
+      if (!skipActivityMerge) {
+        const backendActivities = activitiesData.activities || [];
+        const mergedActivities = [...demoActivities, ...backendActivities].slice(0, 25);
+        setActivities(mergedActivities);
+      }
+      
       setIsLoading(false);
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
@@ -58,12 +78,11 @@ const ChurnDashboard = () => {
   };
 
   const addTemporaryActivity = (activity) => {
+    // Add to demo activities to persist
     setDemoActivities(prev => {
       const newDemoActivities = [activity, ...prev].slice(0, 15);
       return newDemoActivities;
     });
-    
-    setActivities(prev => [activity, ...prev.slice(0, 24)]);
   };
 
   const addCustomerSaveActivity = (customer) => {
@@ -106,8 +125,6 @@ const ChurnDashboard = () => {
     setIsAgentRunning(true);
     
     try {
-      // Business-focused activity sequence showing agent intelligence
-      
       // Step 1: Agent analyzes customer patterns
       addTemporaryActivity({
         id: `analysis-${Date.now()}`,
@@ -173,15 +190,22 @@ const ChurnDashboard = () => {
         });
       }, 4500);
 
+      // FIXED: Don't fetch data again, just update agent status
       setTimeout(() => {
-        fetchDashboardData();
         setIsAgentRunning(false);
+        // Only refresh metrics and customers, not activities
+        fetchDashboardData(true); // Skip activity merge
       }, 6000);
 
     } catch (error) {
       console.error('Failed to trigger agent:', error);
       setIsAgentRunning(false);
     }
+  };
+
+  const clearDemoActivities = () => {
+    setDemoActivities([]);
+    fetchDashboardData();
   };
 
   if (isLoading) {
@@ -295,6 +319,24 @@ const ChurnDashboard = () => {
             <div className="activity-status">
               <div className={`status-dot ${isAgentRunning ? 'running' : 'active'} pulse`}></div>
               <span>{isAgentRunning ? 'AI Agent Processing...' : 'Real-time Monitoring'}</span>
+              {demoActivities.length > 0 && (
+                <button 
+                  className="clear-demo-btn"
+                  onClick={clearDemoActivities}
+                  style={{
+                    marginLeft: '1rem',
+                    padding: '0.25rem 0.5rem',
+                    fontSize: '0.75rem',
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Clear Demo ({demoActivities.length})
+                </button>
+              )}
             </div>
           </div>
           
