@@ -219,6 +219,73 @@ const ChurnDashboard = () => {
   
     return enhancedActivities;
   };
+
+  // And add this enhanced trigger function that shows TiDB activities:
+  const triggerAgent = async () => {
+    setIsAgentRunning(true);
+    
+    try {
+      // Show immediate TiDB-powered feedback
+      addTemporaryActivity({
+        id: `tidb-scan-${Date.now()}`,
+        type: 'tidb_vector_search',
+        title: '🔍 TiDB Vector Search: Scanning 768-dimensional customer embeddings...',
+        description: 'Analyzing behavior patterns using cosine similarity • Processing 1,247 customer profiles',
+        status: 'executing',
+        urgency: 'high',
+        timestamp: 'Now',
+        metadata: { embeddings_processing: 1247, search_type: 'vector' }
+      });
+  
+      // Show agent memory recall
+      setTimeout(() => {
+        addTemporaryActivity({
+          id: `memory-${Date.now()}`,
+          type: 'agent_memory_recall',
+          title: '🧠 Agent Memory: Found 3 similar successful interventions',
+          description: 'Retrieved memories from 2 weeks ago • Same segment, 91% churn risk → 89% success rate',
+          status: 'success',
+          urgency: 'medium',
+          timestamp: 'Just now',
+          metadata: { memories_found: 3, avg_success_rate: 0.89 }
+        });
+      }, 1500);
+  
+      // Show full-text analysis
+      setTimeout(() => {
+        addTemporaryActivity({
+          id: `fulltext-${Date.now()}`,
+          type: 'communication_analysis',
+          title: '📝 Communication Analysis: Detected frustration patterns',
+          description: 'TiDB full-text search through 247 messages • Negative sentiment detected • Key issue: billing complexity',
+          status: 'warning',
+          urgency: 'high',
+          timestamp: 'Just now',
+          metadata: { messages_analyzed: 247, sentiment: -0.7 }
+        });
+      }, 2500);
+  
+      await apiService.triggerAgent();
+      
+      // Original customer save logic...
+      setTimeout(() => {
+        const customerToSave = atRiskCustomers[Math.floor(Math.random() * Math.min(3, atRiskCustomers.length))];
+        if (customerToSave) {
+          addCustomerSaveActivity(customerToSave);
+          setSaveCounter(prev => prev + 1);
+        }
+      }, 3500);
+  
+      setTimeout(() => {
+        fetchDashboardData();
+        setIsAgentRunning(false);
+      }, 6000);
+  
+    } catch (error) {
+      console.error('Failed to trigger agent:', error);
+      setIsAgentRunning(false);
+    }
+  };
   
   return (
     <div className="churn-dashboard">
@@ -693,73 +760,6 @@ const TiDBFeaturesPanel = () => {
       )}
     </div>
   );
-};
-
-// And add this enhanced trigger function that shows TiDB activities:
-const triggerAgent = async () => {
-  setIsAgentRunning(true);
-  
-  try {
-    // Show immediate TiDB-powered feedback
-    addTemporaryActivity({
-      id: `tidb-scan-${Date.now()}`,
-      type: 'tidb_vector_search',
-      title: '🔍 TiDB Vector Search: Scanning 768-dimensional customer embeddings...',
-      description: 'Analyzing behavior patterns using cosine similarity • Processing 1,247 customer profiles',
-      status: 'executing',
-      urgency: 'high',
-      timestamp: 'Now',
-      metadata: { embeddings_processing: 1247, search_type: 'vector' }
-    });
-
-    // Show agent memory recall
-    setTimeout(() => {
-      addTemporaryActivity({
-        id: `memory-${Date.now()}`,
-        type: 'agent_memory_recall',
-        title: '🧠 Agent Memory: Found 3 similar successful interventions',
-        description: 'Retrieved memories from 2 weeks ago • Same segment, 91% churn risk → 89% success rate',
-        status: 'success',
-        urgency: 'medium',
-        timestamp: 'Just now',
-        metadata: { memories_found: 3, avg_success_rate: 0.89 }
-      });
-    }, 1500);
-
-    // Show full-text analysis
-    setTimeout(() => {
-      addTemporaryActivity({
-        id: `fulltext-${Date.now()}`,
-        type: 'communication_analysis',
-        title: '📝 Communication Analysis: Detected frustration patterns',
-        description: 'TiDB full-text search through 247 messages • Negative sentiment detected • Key issue: billing complexity',
-        status: 'warning',
-        urgency: 'high',
-        timestamp: 'Just now',
-        metadata: { messages_analyzed: 247, sentiment: -0.7 }
-      });
-    }, 2500);
-
-    await apiService.triggerAgent();
-    
-    // Original customer save logic...
-    setTimeout(() => {
-      const customerToSave = atRiskCustomers[Math.floor(Math.random() * Math.min(3, atRiskCustomers.length))];
-      if (customerToSave) {
-        addCustomerSaveActivity(customerToSave);
-        setSaveCounter(prev => prev + 1);
-      }
-    }, 3500);
-
-    setTimeout(() => {
-      fetchDashboardData();
-      setIsAgentRunning(false);
-    }, 6000);
-
-  } catch (error) {
-    console.error('Failed to trigger agent:', error);
-    setIsAgentRunning(false);
-  }
 };
 
 export default ChurnDashboard;
