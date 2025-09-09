@@ -5,7 +5,8 @@ from typing import List, Dict, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func
 from datetime import datetime, timedelta
-from models.database import Customer, RetentionPattern, ChurnIntervention, AgentActivity
+from models.database import Customer, RetentionPattern, ChurnIntervention, AgentActivity, AgentMemory, CustomerCommunication
+import uuid
 import logging
 
 logger = logging.getLogger(__name__)
@@ -366,3 +367,236 @@ class TiDBService:
                 'system_status': {'system_health': 'error'},
                 'last_updated': datetime.now().isoformat()
             }
+            
+    async def store_agent_memory(self, customer_id: int, interaction_type: str, 
+                               context: Dict, outcome: str) -> str:
+        """Store agent memory for persistent learning"""
+        session_id = str(uuid.uuid4())
+        
+        try:
+            memory_entry = AgentMemory(
+                session_id=session_id,
+                customer_id=customer_id,
+                interaction_type=interaction_type,
+                context=json.dumps(context),
+                outcome=outcome,
+                embedding=json.dumps(self._generate_memory_embedding(context, outcome))
+            )
+            
+            self.db.add(memory_entry)
+            self.db.commit()
+            
+            logger.info(f"Stored agent memory for customer {customer_id}")
+            return session_id
+            
+        except Exception as e:
+            logger.error(f"Error storing agent memory: {e}")
+            self.db.rollback()
+            return None
+    
+    async def retrieve_agent_memory(self, customer_id: int, interaction_type: str, 
+                                  context_embedding: List[float], limit: int = 5) -> List[Dict]:
+        """Retrieve relevant agent memories using vector similarity"""
+        
+        try:
+            query_vector = json.dumps(context_embedding)
+            
+            # TiDB Vector Search on agent memories
+            memory_search_query = text("""
+                SELECT session_id, customer_id, interaction_type, context, outcome, timestamp,
+                       VEC_COSINE_DISTANCE(JSON_EXTRACT(embedding, '$'), JSON_EXTRACT(:query_vector, '$')) as similarity
+                FROM agent_memory
+                WHERE customer_id = :customer_id 
+                   OR interaction_type = :interaction_type
+                ORDER BY similarity ASC
+                LIMIT :limit
+            """)
+            
+            result = self.db.execute(memory_search_query, {
+                "query_vector": query_vector,
+                "customer_id": customer_id,
+                "interaction_type": interaction_type,
+                "limit": limit
+            })
+            
+            memories = []
+            for row in result:
+                memories.append({
+                    "session_id": row.session_id,
+                    "customer_id": row.customer_id,
+                    "interaction_type": row.interaction_type,
+                    "context": json.loads(row.context),
+                    "outcome": row.outcome,
+                    "timestamp": row.timestamp,
+                    "similarity_score": 1.0 - row.similarity
+                })
+            
+            logger.info(f"Retrieved {len(memories)} agent memories")
+            return memories
+            
+        except Exception as e:
+            logger.error(f"Error retrieving agent memory: {e}")
+            return []
+    
+    async def store_customer_communication(self, customer_id: int, message: str, 
+                                         comm_type: str, direction: str = 'inbound') -> bool:
+        """Store customer communication for full-text search"""
+        
+        try:
+            communication = CustomerCommunication(
+                customer_id=customer_id,
+                message_content=message,
+                communication_type=comm_type,
+                communication_direction=direction,
+                sentiment_score=self._analyze_sentiment(message)
+            )
+            
+            self.db.add(communication)
+            self.db.commit()
+            
+            logger.info(f"Stored communication for customer {customer_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error storing communication: {e}")
+            self.db.rollback()
+            return False
+    
+    async def full_text_search_communications(self, customer_id: int, 
+                                            search_terms: str) -> List[Dict]:
+        """Use TiDB full-text search on customer communications"""
+        
+        try:
+            # For TiDB, we'll use LIKE search since FULLTEXT might need configuration
+            fulltext_query = text("""
+                SELECT communication_id, customer_id, message_content, communication_type,
+                       timestamp, sentiment_score, communication_direction
+                FROM customer_communications
+                WHERE customer_id = :customer_id
+                  AND (message_content LIKE :search_pattern1 
+                       OR message_content LIKE :search_pattern2
+                       OR message_content LIKE :search_pattern3)
+                ORDER BY timestamp DESC
+                LIMIT 10
+            """)
+            
+            # Create search patterns from terms
+            terms = search_terms.split()
+            patterns = [f"%{term}%" for term in terms[:3]]  # Take first 3 terms
+            
+            result = self.db.execute(fulltext_query, {
+                "customer_id": customer_id,
+                "search_pattern1": patterns[0] if len(patterns) > 0 else "%",
+                "search_pattern2": patterns[1] if len(patterns) > 1 else "%",
+                "search_pattern3": patterns[2] if len(patterns) > 2 else "%"
+            })
+            
+            communications = []
+            for row in result:
+                communications.append({
+                    "communication_id": row.communication_id,
+                    "customer_id": row.customer_id,
+                    "message_content": row.message_content,
+                    "communication_type": row.communication_type,
+                    "timestamp": row.timestamp,
+                    "sentiment_score": row.sentiment_score,
+                    "direction": row.communication_direction
+                })
+            
+            logger.info(f"Found {len(communications)} communications")
+            return communications
+            
+        except Exception as e:
+            logger.error(f"Error in full-text search: {e}")
+            return []
+    
+    async def graph_rag_customer_relationships(self, customer_id: int) -> Dict:
+        """Use Graph RAG to find customer relationship patterns"""
+        
+        try:
+            # Multi-hop relationship query using TiDB SQL
+            graph_query = text("""
+                WITH customer_network AS (
+                    -- Direct relationships (same company)
+                    SELECT c1.id as customer_id, c2.id as related_customer_id, 
+                           'same_company' as relationship_type, 1 as hop_distance,
+                           c2.name, c2.company, c2.churn_probability
+                    FROM customers c1
+                    JOIN customers c2 ON c1.company = c2.company
+                    WHERE c1.id = :customer_id AND c2.id != :customer_id
+                    
+                    UNION ALL
+                    
+                    -- Similar profile relationships  
+                    SELECT c1.id, c3.id, 'similar_profile' as relationship_type, 2 as hop_distance,
+                           c3.name, c3.company, c3.churn_probability
+                    FROM customers c1
+                    JOIN customers c3 ON c1.subscription_plan = c3.subscription_plan
+                    WHERE c1.id = :customer_id 
+                      AND ABS(c1.annual_contract_value - c3.annual_contract_value) < 10000
+                      AND c3.id != :customer_id
+                    LIMIT 10
+                )
+                SELECT cn.*, ci.strategy_chosen, ci.actual_outcome
+                FROM customer_network cn
+                LEFT JOIN churn_interventions ci ON cn.related_customer_id = ci.customer_id
+                ORDER BY cn.hop_distance, cn.churn_probability DESC
+            """)
+            
+            result = self.db.execute(graph_query, {"customer_id": customer_id})
+            
+            relationships = {
+                "direct_relationships": [],
+                "similar_profile_customers": [],
+                "successful_strategies": []
+            }
+            
+            for row in result:
+                relationship_data = {
+                    "customer_id": row.related_customer_id,
+                    "name": row.name,
+                    "company": row.company,
+                    "churn_probability": row.churn_probability,
+                    "relationship": row.relationship_type
+                }
+                
+                if row.hop_distance == 1:
+                    relationships["direct_relationships"].append(relationship_data)
+                else:
+                    if row.strategy_chosen and row.actual_outcome == 'retained':
+                        relationship_data["successful_strategy"] = row.strategy_chosen
+                        relationships["successful_strategies"].append(relationship_data)
+                    else:
+                        relationships["similar_profile_customers"].append(relationship_data)
+            
+            logger.info(f"Found graph relationships for customer {customer_id}")
+            return relationships
+            
+        except Exception as e:
+            logger.error(f"Error in graph RAG: {e}")
+            return {"direct_relationships": [], "similar_profile_customers": [], "successful_strategies": []}
+    
+    def _generate_memory_embedding(self, context: Dict, outcome: str) -> List[float]:
+        """Generate embedding for agent memory"""
+        try:
+            # Combine context and outcome for embedding
+            memory_text = f"{json.dumps(context)} outcome: {outcome}"
+            # Simple embedding generation (you can enhance this)
+            return [hash(memory_text + str(i)) % 1000 / 1000.0 for i in range(768)]
+        except Exception as e:
+            logger.error(f"Error generating memory embedding: {e}")
+            return [0.0] * 768
+    
+    def _analyze_sentiment(self, message: str) -> float:
+        """Simple sentiment analysis (you can enhance with proper NLP)"""
+        positive_words = ['good', 'great', 'excellent', 'happy', 'satisfied', 'love', 'amazing']
+        negative_words = ['bad', 'terrible', 'hate', 'angry', 'frustrated', 'disappointed', 'awful']
+        
+        message_lower = message.lower()
+        positive_count = sum(1 for word in positive_words if word in message_lower)
+        negative_count = sum(1 for word in negative_words if word in message_lower)
+        
+        if positive_count + negative_count == 0:
+            return 0.0
+        
+        return (positive_count - negative_count) / (positive_count + negative_count)
