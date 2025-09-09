@@ -1,4 +1,4 @@
-// Fixed ChurnDashboard.js with persistent demo activities
+// Business-focused ChurnDashboard.js - TiDB features integrated into agent workflow
 import React, { useState, useEffect } from 'react';
 import { 
   AlertTriangle, Users, TrendingDown, Bot, CheckCircle, 
@@ -15,7 +15,7 @@ const ChurnDashboard = () => {
   const [saveCounter, setSaveCounter] = useState(847);
   const [isAgentRunning, setIsAgentRunning] = useState(false);
   const [recentSaves, setRecentSaves] = useState([]);
-  const [demoActivities, setDemoActivities] = useState([]); // Store demo activities separately
+  const [demoActivities, setDemoActivities] = useState([]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -44,9 +44,9 @@ const ChurnDashboard = () => {
       
       setMetrics(metricsData);
       
-      // FIXED: Merge demo activities with backend activities instead of replacing
+      // Merge demo activities with backend activities
       const backendActivities = activitiesData.activities || [];
-      const mergedActivities = [...demoActivities, ...backendActivities].slice(0, 25); // Keep last 25
+      const mergedActivities = [...demoActivities, ...backendActivities].slice(0, 25);
       setActivities(mergedActivities);
       
       setAtRiskCustomers(customersData.customers);
@@ -58,13 +58,11 @@ const ChurnDashboard = () => {
   };
 
   const addTemporaryActivity = (activity) => {
-    // Add to demo activities to persist across refreshes
     setDemoActivities(prev => {
-      const newDemoActivities = [activity, ...prev].slice(0, 15); // Keep last 15 demo activities
+      const newDemoActivities = [activity, ...prev].slice(0, 15);
       return newDemoActivities;
     });
     
-    // Also update main activities for immediate display
     setActivities(prev => [activity, ...prev.slice(0, 24)]);
   };
 
@@ -73,7 +71,7 @@ const ChurnDashboard = () => {
       id: `save-${Date.now()}`,
       type: 'customer_saved',
       title: `✅ CUSTOMER SAVED: ${customer.name} (${customer.company})`,
-      description: `Successful intervention • Churn risk: ${(customer.churn_probability * 100).toFixed(0)}% → 23% • $${(customer.annual_contract_value/1000).toFixed(0)}K revenue retained`,
+      description: `AI agent successfully prevented churn • Risk reduced from ${(customer.churn_probability * 100).toFixed(0)}% to 23% • $${(customer.annual_contract_value/1000).toFixed(0)}K revenue secured`,
       status: 'success',
       urgency: 'low',
       timestamp: 'Just now',
@@ -93,8 +91,8 @@ const ChurnDashboard = () => {
     const correctionActivity = {
       id: `correction-${Date.now()}`,
       type: 'self_correction',
-      title: '🔄 Self-correction: Email bounced → Phone call successful',
-      description: 'Agent adapted strategy automatically • Customer engagement improved',
+      title: '🔄 Agent Self-Correction: Adapted strategy for better results',
+      description: 'Initial email approach failed • Agent automatically switched to phone outreach • Customer successfully engaged',
       status: 'corrected',
       urgency: 'medium',
       timestamp: 'Just now',
@@ -108,49 +106,51 @@ const ChurnDashboard = () => {
     setIsAgentRunning(true);
     
     try {
-      // Show immediate TiDB-powered feedback
+      // Business-focused activity sequence showing agent intelligence
+      
+      // Step 1: Agent analyzes customer patterns
       addTemporaryActivity({
-        id: `tidb-scan-${Date.now()}`,
-        type: 'tidb_vector_search',
-        title: '🔍 TiDB Vector Search: Scanning 768-dimensional customer embeddings...',
-        description: 'Analyzing behavior patterns using cosine similarity • Processing 1,247 customer profiles',
+        id: `analysis-${Date.now()}`,
+        type: 'customer_analysis',
+        title: '🔍 AI Agent: Analyzing customer behavior patterns...',
+        description: 'Agent scanning 1,247 customer profiles • Finding similar cases from successful interventions • Identifying optimal retention strategies',
         status: 'executing',
         urgency: 'high',
         timestamp: 'Now',
-        metadata: { embeddings_processing: 1247, search_type: 'vector' }
+        metadata: { customers_analyzed: 1247 }
       });
 
-      // Show agent memory recall
+      // Step 2: Agent recalls successful strategies
       setTimeout(() => {
         addTemporaryActivity({
-          id: `memory-${Date.now()}`,
-          type: 'agent_memory_recall',
-          title: '🧠 Agent Memory: Found 3 similar successful interventions',
-          description: 'Retrieved memories from 2 weeks ago • Same segment, 91% churn risk → 89% success rate',
+          id: `strategy-${Date.now()}`,
+          type: 'strategy_selection',
+          title: '🧠 AI Agent: Found proven retention strategies',
+          description: 'Agent recalled 3 similar cases from past successes • Same customer segment with 91% risk → 89% success rate • Strategy: Personalized training approach',
           status: 'success',
           urgency: 'medium',
           timestamp: 'Just now',
-          metadata: { memories_found: 3, avg_success_rate: 0.89 }
+          metadata: { similar_cases: 3, success_rate: 0.89 }
         });
       }, 1500);
 
-      // Show full-text analysis
+      // Step 3: Agent analyzes customer communications  
       setTimeout(() => {
         addTemporaryActivity({
-          id: `fulltext-${Date.now()}`,
-          type: 'communication_analysis',
-          title: '📝 Communication Analysis: Detected frustration patterns',
-          description: 'TiDB full-text search through 247 messages • Negative sentiment detected • Key issue: billing complexity',
+          id: `communication-${Date.now()}`,
+          type: 'communication_insight',
+          title: '📞 AI Agent: Discovered customer pain points',
+          description: 'Agent analyzed 247 recent messages • Detected frustration with billing complexity • Key insight: Customer needs simplified onboarding',
           status: 'warning',
           urgency: 'high',
           timestamp: 'Just now',
-          metadata: { messages_analyzed: 247, sentiment: -0.7 }
+          metadata: { messages_analyzed: 247, sentiment: 'frustrated' }
         });
       }, 2500);
 
       await apiService.triggerAgent();
       
-      // Customer save simulation
+      // Step 4: Customer gets saved
       setTimeout(() => {
         const customerToSave = atRiskCustomers[Math.floor(Math.random() * Math.min(3, atRiskCustomers.length))];
         if (customerToSave) {
@@ -159,13 +159,22 @@ const ChurnDashboard = () => {
         }
       }, 3500);
 
-      // Self-correction simulation
+      // Step 5: Show agent learning
       setTimeout(() => {
-        addSelfCorrectionActivity();
+        addTemporaryActivity({
+          id: `learning-${Date.now()}`,
+          type: 'agent_learning',
+          title: '📈 AI Agent: Learning from success',
+          description: 'Agent updated retention patterns • Strategy effectiveness confirmed • Similar future cases will benefit from this approach',
+          status: 'info',
+          urgency: 'low',
+          timestamp: 'Just now',
+          metadata: { patterns_updated: 1 }
+        });
       }, 4500);
 
       setTimeout(() => {
-        fetchDashboardData(); // This will now merge instead of replace
+        fetchDashboardData();
         setIsAgentRunning(false);
       }, 6000);
 
@@ -173,12 +182,6 @@ const ChurnDashboard = () => {
       console.error('Failed to trigger agent:', error);
       setIsAgentRunning(false);
     }
-  };
-
-  // Clear demo activities function (optional - for testing)
-  const clearDemoActivities = () => {
-    setDemoActivities([]);
-    fetchDashboardData();
   };
 
   if (isLoading) {
@@ -201,7 +204,7 @@ const ChurnDashboard = () => {
             </div>
             <div>
               <h1>Customer Success Agent</h1>
-              <p>Autonomous AI that saves customers from churn • TiDB Serverless</p>
+              <p>Autonomous AI that saves customers from churn • Powered by advanced analytics</p>
             </div>
           </div>
           
@@ -283,9 +286,6 @@ const ChurnDashboard = () => {
         </div>
       </div>
 
-      {/* TiDB Features Demo Section */}
-      <TiDBFeaturesPanel />
-
       {/* Main Content */}
       <div className="main-content">
         {/* Live Activity Feed */}
@@ -294,26 +294,7 @@ const ChurnDashboard = () => {
             <h2>🚨 Live Customer Rescue Operations</h2>
             <div className="activity-status">
               <div className={`status-dot ${isAgentRunning ? 'running' : 'active'} pulse`}></div>
-              <span>{isAgentRunning ? 'Processing...' : 'Real-time'}</span>
-              {/* Optional: Add clear button for testing */}
-              {demoActivities.length > 0 && (
-                <button 
-                  className="clear-demo-btn"
-                  onClick={clearDemoActivities}
-                  style={{
-                    marginLeft: '1rem',
-                    padding: '0.25rem 0.5rem',
-                    fontSize: '0.75rem',
-                    background: '#ef4444',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Clear Demo ({demoActivities.length})
-                </button>
-              )}
+              <span>{isAgentRunning ? 'AI Agent Processing...' : 'Real-time Monitoring'}</span>
             </div>
           </div>
           
@@ -396,13 +377,13 @@ const ChurnDashboard = () => {
           </div>
         </div>
 
-        <div className="analytics-card tidb-status">
-          <h3>🚀 TiDB Serverless Status</h3>
-          <div className="tidb-metrics">
-            <div className="tidb-metric">Vector Search: <span className="status-ok">Active • 47ms avg</span></div>
-            <div className="tidb-metric">HTAP Processing: <span className="status-ok">1.2M ops/sec</span></div>
-            <div className="tidb-metric">Churn Models: <span className="status-ok">Updated 2min ago</span></div>
-            <div className="tidb-metric">Auto-scaling: <span className="status-ok">Optimized</span></div>
+        <div className="analytics-card ai-intelligence">
+          <h3>🧠 AI Intelligence Engine</h3>
+          <div className="ai-metrics">
+            <div className="ai-metric">Pattern Recognition: <span className="status-ok">Advanced ML Models</span></div>
+            <div className="ai-metric">Real-time Processing: <span className="status-ok">1.2M ops/sec</span></div>
+            <div className="ai-metric">Success Prediction: <span className="status-ok">94.7% accuracy</span></div>
+            <div className="ai-metric">Auto-scaling: <span className="status-ok">Cloud-native</span></div>
           </div>
         </div>
       </div>
@@ -410,172 +391,7 @@ const ChurnDashboard = () => {
   );
 };
 
-// TiDB Features Panel Component
-const TiDBFeaturesPanel = () => {
-  const [featuresData, setFeaturesData] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const demonstrateTiDBFeatures = async () => {
-    setIsLoading(true);
-    try {
-      const response = await apiService.getTiDBFeaturesDemo();
-      setFeaturesData(response.tidb_features_demo);
-    } catch (error) {
-      console.error('Failed to fetch TiDB features demo:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="tidb-features-panel">
-      <div className="section-header">
-        <h2>🚀 TiDB Serverless Features</h2>
-        <button 
-          className="demo-button"
-          onClick={demonstrateTiDBFeatures}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <>
-              <Loader className="spin" size={16} />
-              Loading...
-            </>
-          ) : (
-            <>
-              <Zap size={16} />
-              Demo TiDB Features
-            </>
-          )}
-        </button>
-      </div>
-
-      {featuresData && (
-        <div className="features-grid">
-          {/* Vector Search Demo */}
-          <div className="feature-card vector-search">
-            <div className="feature-header">
-              <div className="feature-icon">🔍</div>
-              <h3>Vector Search</h3>
-              <div className="performance-badge">{featuresData.vector_search.query_time_ms}ms</div>
-            </div>
-            <p>{featuresData.vector_search.description}</p>
-            <div className="feature-stats">
-              <div className="stat">
-                <span className="stat-value">{featuresData.vector_search.results_found}</span>
-                <span className="stat-label">Agent Memories Found</span>
-              </div>
-            </div>
-            {featuresData.vector_search.sample_memories?.length > 0 && (
-              <div className="sample-data">
-                <h4>Sample Memory:</h4>
-                <div className="memory-item">
-                  <span className="memory-type">
-                    {featuresData.vector_search.sample_memories[0].interaction_type}
-                  </span>
-                  <span className="memory-outcome">
-                    → {featuresData.vector_search.sample_memories[0].outcome}
-                  </span>
-                  <span className="similarity-score">
-                    {(featuresData.vector_search.sample_memories[0].similarity_score * 100).toFixed(1)}% match
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Full-Text Search Demo */}
-          <div className="feature-card fulltext-search">
-            <div className="feature-header">
-              <div className="feature-icon">📝</div>
-              <h3>Full-Text Search</h3>
-              <div className="performance-badge">Real-time</div>
-            </div>
-            <p>{featuresData.full_text_search.description}</p>
-            <div className="feature-stats">
-              <div className="stat">
-                <span className="stat-value">{featuresData.full_text_search.results_found}</span>
-                <span className="stat-label">Communications Found</span>
-              </div>
-            </div>
-            {featuresData.full_text_search.sample_communications?.length > 0 && (
-              <div className="sample-data">
-                <h4>Recent Communication:</h4>
-                <div className="comm-item">
-                  <span className="comm-type">
-                    {featuresData.full_text_search.sample_communications[0].communication_type}
-                  </span>
-                  <span className="comm-sentiment">
-                    Sentiment: {featuresData.full_text_search.sample_communications[0].sentiment_score > 0 ? '😊' : '😞'}
-                  </span>
-                  <div className="comm-preview">
-                    {featuresData.full_text_search.sample_communications[0].message_content.substring(0, 80)}...
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Graph RAG Demo */}
-          <div className="feature-card graph-rag">
-            <div className="feature-header">
-              <div className="feature-icon">🕸️</div>
-              <h3>Graph RAG</h3>
-              <div className="performance-badge">Multi-hop</div>
-            </div>
-            <p>{featuresData.graph_rag.description}</p>
-            <div className="feature-stats">
-              <div className="stat">
-                <span className="stat-value">{featuresData.graph_rag.direct_relationships}</span>
-                <span className="stat-label">Direct Links</span>
-              </div>
-              <div className="stat">
-                <span className="stat-value">{featuresData.graph_rag.similar_customers}</span>
-                <span className="stat-label">Similar Profiles</span>
-              </div>
-              <div className="stat">
-                <span className="stat-value">{featuresData.graph_rag.successful_strategies}</span>
-                <span className="stat-label">Success Patterns</span>
-              </div>
-            </div>
-          </div>
-
-          {/* HTAP Processing Demo */}
-          <div className="feature-card htap-processing">
-            <div className="feature-header">
-              <div className="feature-icon">⚡</div>
-              <h3>HTAP Processing</h3>
-              <div className="performance-badge">{featuresData.htap_processing.operations_per_second}</div>
-            </div>
-            <p>{featuresData.htap_processing.description}</p>
-            <div className="feature-stats">
-              <div className="stat">
-                <span className="stat-value">{featuresData.htap_processing.response_time_ms}ms</span>
-                <span className="stat-label">Response Time</span>
-              </div>
-              <div className="stat">
-                <span className="stat-value">Auto</span>
-                <span className="stat-label">Scaling</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!featuresData && !isLoading && (
-        <div className="features-placeholder">
-          <div className="placeholder-content">
-            <div className="placeholder-icon">🚀</div>
-            <h3>TiDB Serverless Features</h3>
-            <p>Click "Demo TiDB Features" to see Vector Search, Full-Text Search, Graph RAG, and HTAP processing in action!</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Activity Item Component (same as before)
+// Enhanced ActivityItem component for business focus
 const ActivityItem = ({ activity }) => {
   const [isNew, setIsNew] = useState(false);
 
@@ -587,24 +403,20 @@ const ActivityItem = ({ activity }) => {
   }, [activity.timestamp]);
 
   const getActivityIcon = (type, status) => {
-    if (type === 'churn_intervention') {
-      return <AlertTriangle className={`activity-icon ${status}`} size={20} />;
+    if (type === 'customer_analysis') {
+      return <Bot className="activity-icon analyzing" size={20} />;
+    } else if (type === 'strategy_selection') {
+      return <Bot className="activity-icon success" size={20} />;
+    } else if (type === 'communication_insight') {
+      return <Bot className="activity-icon warning" size={20} />;
+    } else if (type === 'agent_learning') {
+      return <Bot className="activity-icon info" size={20} />;
     } else if (type === 'customer_saved') {
       return <CheckCircle className="activity-icon success" size={20} />;
     } else if (type === 'self_correction') {
       return <Zap className="activity-icon warning" size={20} />;
-    } else if (type === 'tidb_vector_search') {
-      return <Bot className="activity-icon tidb_vector_search" size={20} />;
-    } else if (type === 'agent_memory_recall') {
-      return <Bot className="activity-icon agent_memory_recall" size={20} />;
-    } else if (type === 'communication_analysis') {
-      return <Bot className="activity-icon communication_analysis" size={20} />;
-    } else if (type === 'graph_rag_analysis') {
-      return <Bot className="activity-icon graph_rag_analysis" size={20} />;
-    } else if (type === 'htap_processing') {
-      return <Bot className="activity-icon htap_processing" size={20} />;
-    } else if (type === 'agent_triggered') {
-      return <Bot className="activity-icon executing" size={20} />;
+    } else if (type === 'churn_intervention') {
+      return <AlertTriangle className={`activity-icon ${status}`} size={20} />;
     } else {
       return <Bot className="activity-icon info" size={20} />;
     }
@@ -632,29 +444,24 @@ const ActivityItem = ({ activity }) => {
       
       {activity.metadata && Object.keys(activity.metadata).length > 0 && (
         <div className="activity-metadata">
-          {activity.metadata.churn_probability && (
-            <span className="metadata-tag">
-              Risk: {(activity.metadata.churn_probability * 100).toFixed(0)}%
+          {activity.metadata.customers_analyzed && (
+            <span className="metadata-tag analytics">
+              {activity.metadata.customers_analyzed} profiles analyzed
+            </span>
+          )}
+          {activity.metadata.similar_cases && (
+            <span className="metadata-tag intelligence">
+              {activity.metadata.similar_cases} similar cases found
+            </span>
+          )}
+          {activity.metadata.messages_analyzed && (
+            <span className="metadata-tag communication">
+              {activity.metadata.messages_analyzed} messages analyzed
             </span>
           )}
           {activity.metadata.revenue_saved && (
             <span className="metadata-tag revenue">
-              ${(activity.metadata.revenue_saved / 1000).toFixed(0)}K saved
-            </span>
-          )}
-          {activity.metadata.embeddings_processing && (
-            <span className="metadata-tag vector">
-              {activity.metadata.embeddings_processing} embeddings
-            </span>
-          )}
-          {activity.metadata.memories_found && (
-            <span className="metadata-tag memory">
-              {activity.metadata.memories_found} memories
-            </span>
-          )}
-          {activity.metadata.messages_analyzed && (
-            <span className="metadata-tag fulltext">
-              {activity.metadata.messages_analyzed} messages
+              ${(activity.metadata.revenue_saved / 1000).toFixed(0)}K secured
             </span>
           )}
         </div>
