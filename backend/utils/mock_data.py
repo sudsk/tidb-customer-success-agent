@@ -318,6 +318,7 @@ async def initialize_customer_data(db: Session):
     
     logger.info(f"✅ Initialized {len(customers_data)} customers, {len(retention_patterns)} patterns, and {len(historical_interventions)} historical interventions")
 
+    await create_tidb_enhanced_tables(db)
 
 def generate_customer_embedding(customer_data: dict) -> list:
     """Generate realistic customer behavior embedding"""
@@ -414,3 +415,133 @@ def generate_pattern_embedding(pattern_type: str) -> list:
         embedding[i] = np.random.normal(0, 0.1)
     
     return embedding
+
+async def create_tidb_enhanced_tables(db: Session):
+    """Create new TiDB enhanced tables and populate demo data"""
+    
+    try:
+        # Create tables using raw SQL
+        create_tables_sql = [
+            """
+            CREATE TABLE IF NOT EXISTS agent_memory (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                session_id VARCHAR(255) NOT NULL,
+                customer_id INT NOT NULL,
+                interaction_type VARCHAR(100) NOT NULL,
+                context JSON NOT NULL,
+                outcome VARCHAR(100) NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                embedding JSON,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_customer_type (customer_id, interaction_type),
+                INDEX idx_session (session_id)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS customer_communications (
+                communication_id INT AUTO_INCREMENT PRIMARY KEY,
+                customer_id INT NOT NULL,
+                message_content TEXT NOT NULL,
+                communication_type VARCHAR(50) NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                sentiment_score FLOAT DEFAULT 0.0,
+                communication_direction VARCHAR(20) DEFAULT 'inbound',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_customer_time (customer_id, timestamp)
+            )
+            """
+        ]
+        
+        # Execute table creation
+        for sql in create_tables_sql:
+            db.execute(text(sql))
+        
+        db.commit()
+        logger.info("✅ Enhanced TiDB tables created")
+        
+        # Add sample communications for demo
+        sample_communications = [
+            {
+                "customer_id": 1,  # Sarah Chen
+                "message_content": "I'm really frustrated with the billing system. It's so confusing and I can't understand my charges. Considering switching to your competitor.",
+                "communication_type": "email",
+                "communication_direction": "inbound",
+                "sentiment_score": -0.7
+            },
+            {
+                "customer_id": 1,
+                "message_content": "Support ticket #12345: Feature request - need better reporting dashboard. Current one is inadequate for our needs.",
+                "communication_type": "support_ticket",
+                "communication_direction": "inbound", 
+                "sentiment_score": -0.3
+            },
+            {
+                "customer_id": 2,  # Mike Rodriguez
+                "message_content": "The new features are too complex for my team. We need simpler interface and better training materials.",
+                "communication_type": "phone",
+                "communication_direction": "inbound",
+                "sentiment_score": -0.5
+            },
+            {
+                "customer_id": 2,
+                "message_content": "Meeting notes: Discussed contract renewal concerns. Price increase of 20% is significant burden for our budget.",
+                "communication_type": "meeting",
+                "communication_direction": "inbound",
+                "sentiment_score": -0.4
+            }
+        ]
+        
+        # Insert communications
+        for comm in sample_communications:
+            insert_sql = text("""
+                INSERT INTO customer_communications 
+                (customer_id, message_content, communication_type, communication_direction, sentiment_score)
+                VALUES (:customer_id, :message_content, :communication_type, :communication_direction, :sentiment_score)
+            """)
+            db.execute(insert_sql, comm)
+        
+        # Add sample agent memories
+        sample_memories = [
+            {
+                "session_id": "memory_001",
+                "customer_id": 1,
+                "interaction_type": "churn_intervention",
+                "context": json.dumps({
+                    "segment": "smb",
+                    "issue": "billing_confusion",
+                    "strategy": "personalized_billing_walkthrough",
+                    "original_churn_prob": 0.89
+                }),
+                "outcome": "successful",
+                "embedding": json.dumps([0.1, 0.2, 0.3] + [0.0] * 765)  # Mock embedding
+            },
+            {
+                "session_id": "memory_002", 
+                "customer_id": 2,
+                "interaction_type": "churn_intervention",
+                "context": json.dumps({
+                    "segment": "enterprise",
+                    "issue": "feature_complexity",
+                    "strategy": "dedicated_training_session",
+                    "original_churn_prob": 0.91
+                }),
+                "outcome": "successful",
+                "embedding": json.dumps([0.2, 0.4, 0.1] + [0.0] * 765)  # Mock embedding
+            }
+        ]
+        
+        # Insert memories
+        for memory in sample_memories:
+            insert_sql = text("""
+                INSERT INTO agent_memory 
+                (session_id, customer_id, interaction_type, context, outcome, embedding)
+                VALUES (:session_id, :customer_id, :interaction_type, :context, :outcome, :embedding)
+            """)
+            db.execute(insert_sql, memory)
+        
+        db.commit()
+        logger.info("✅ Enhanced demo data populated")
+        
+    except Exception as e:
+        logger.error(f"Error creating enhanced tables: {e}")
+        db.rollback()
