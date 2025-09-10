@@ -6,7 +6,7 @@ from sqlalchemy.sql import func
 from config import config
 
 Base = declarative_base()
-engine = create_engine(config.DATABASE_URL, echo=True, pool_size=10, max_overflow=20)
+engine = create_engine(config.DATABASE_URL, echo=False, pool_size=10, max_overflow=20)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 class Customer(Base):
