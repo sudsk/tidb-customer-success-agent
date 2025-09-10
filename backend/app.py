@@ -472,7 +472,7 @@ async def get_real_time_activities(db: Session = Depends(get_db)):
         activities = []
         for activity in recent_activities:
             try:
-                metadata = activity.activity_metadata or {}
+                metadata = json.loads(activity.activity_metadata or "{}")
                 
                 # Map database activity types to frontend display
                 activity_data = {
@@ -542,7 +542,7 @@ def generate_activity_title(activity: AgentActivity) -> str:
                 metadata = activity.activity_metadata
             elif isinstance(activity.activity_metadata, str):
                 try:
-                    metadata = activity.activity_metadata or {}
+                    metadata = json.loads(activity.activity_metadata)
                 except:
                     metadata = {}
             else:
