@@ -104,64 +104,124 @@ async def root():
 async def get_dashboard_metrics(db: Session = Depends(get_db)):
     """Get real-time dashboard metrics"""
     
-    tidb_service = TiDBService(db)
-    analytics = await tidb_service.get_churn_analytics()
-    
-    # Calculate key metrics from database
-    total_at_risk = sum(seg.get('total_at_risk', 0) for seg in analytics['churn_distribution'].values())
-    
-    # Get actual customer saves count
-    successful_interventions = db.query(ChurnIntervention).filter(
-        ChurnIntervention.actual_outcome == 'retained'
-    ).count()
-    
-    # Calculate revenue retention based on successful interventions
-    revenue_retained = db.query(ChurnIntervention).filter(
-        ChurnIntervention.actual_outcome == 'retained'
-    ).all()
-    total_revenue_retained = sum(i.estimated_retention_value for i in revenue_retained)
-    
-    # Calculate churn reduction rate
-    total_customers = analytics['total_customers']
-    high_risk_customers = analytics['high_risk_customers']
-    churn_reduction_rate = ((total_customers - high_risk_customers) / max(total_customers, 1)) * 100
-    
-    return {
-        "kpis": {
-            "customers_saved": {
-                "value": successful_interventions,
-                "change": f"+{max(0, successful_interventions - 800)} from baseline",
-                "label": "Customers Saved from Churn"
+    try:
+        tidb_service = TiDBService(db)
+        analytics = await tidb_service.get_churn_analytics()
+        
+        # Calculate key metrics from database
+        total_at_risk = sum(seg.get('total_at_risk', 0) for seg in analytics['churn_distribution'].values())
+        
+        # Get actual customer saves count
+        successful_interventions = db.query(ChurnIntervention).filter(
+            ChurnIntervention.actual_outcome == 'retained'
+        ).count()
+        
+        # Calculate revenue retention based on successful interventions
+        revenue_retained = db.query(ChurnIntervention).filter(
+            ChurnIntervention.actual_outcome == 'retained'
+        ).all()
+        total_revenue_retained = sum(i.estimated_retention_value for i in revenue_retained)
+        
+        # Calculate churn reduction rate
+        total_customers = analytics['total_customers']
+        high_risk_customers = analytics['high_risk_customers']
+        churn_reduction_rate = ((total_customers - high_risk_customers) / max(total_customers, 1)) * 100
+        
+        return {
+            "kpis": {
+                "customers_saved": {
+                    "value": successful_interventions,
+                    "change": f"+{max(0, successful_interventions - 800)} from baseline",
+                    "label": "Customers Saved from Churn"
+                },
+                "revenue_retained": {
+                    "value": total_revenue_retained,
+                    "change": f"{len(revenue_retained)} successful interventions", 
+                    "label": "Revenue Retained (Total)"
+                },
+                "churn_reduction": {
+                    "value": round(churn_reduction_rate, 1),
+                    "change": f"{high_risk_customers} customers at risk",
+                    "label": "Customer Retention Rate"
+                },
+                "agent_autonomy": {
+                    "value": analytics['agent_performance']['autonomy_level'],
+                    "change": f"{analytics['agent_performance']['avg_response_time_minutes']:.1f}min avg response",
+                    "label": "Agent Autonomy Level"
+                }
             },
-            "revenue_retained": {
-                "value": total_revenue_retained,
-                "change": f"{len(revenue_retained)} successful interventions", 
-                "label": "Revenue Retained (Total)"
+            "churn_risk_summary": {
+                "total_customers": total_customers,
+                "high_risk_customers": high_risk_customers,
+                "total_revenue_at_risk": total_at_risk,
+                "churn_distribution": analytics['churn_distribution']
             },
-            "churn_reduction": {
-                "value": round(churn_reduction_rate, 1),
-                "change": f"{high_risk_customers} customers at risk",
-                "label": "Customer Retention Rate"
+            "agent_performance": analytics['agent_performance']
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in dashboard metrics: {e}")
+        # Return fallback metrics
+        return {
+            "kpis": {
+                "customers_saved": {"value": 0, "change": "", "label": "Customers Saved"},
+                "revenue_retained": {"value": 0, "change": "", "label": "Revenue Retained"},
+                "churn_reduction": {"value": 0, "change": "", "label": "Churn Reduction"},
+                "agent_autonomy": {"value": 0, "change": "", "label": "Agent Autonomy"}
             },
-            "agent_autonomy": {
-                "value": analytics['agent_performance']['autonomy_level'],
-                "change": f"{analytics['agent_performance']['avg_response_time_minutes']:.1f}min avg response",
-                "label": "Agent Autonomy Level"
-            }
-        },
-        "churn_risk_summary": {
-            "total_customers": total_customers,
-            "high_risk_customers": high_risk_customers,
-            "total_revenue_at_risk": total_at_risk,
-            "churn_distribution": analytics['churn_distribution']
-        },
-        "agent_performance": analytics['agent_performance']
-    }
+            "churn_risk_summary": {
+                "total_customers": 0,
+                "high_risk_customers": 0,
+                "total_revenue_at_risk": 0,
+                "churn_distribution": {}
+            },
+            "agent_performance": {}
+        }
 
 @app.get("/api/dashboard/activities")
 async def get_recent_activities():
     """Get recent agent activities from database"""
-    return await get_real_time_activities()
+    
+    formatted_activities = []
+    
+    for activity in latest_activities[-15:]:
+        if activity.get('type') == 'churn_intervention':
+            formatted_activities.append({
+                "id": f"intervention_{activity.get('intervention_id', 'unknown')}",
+                "type": "churn_intervention", 
+                "title": f"🚨 Customer at Risk: {activity['customer']} ({activity['company']})",
+                "description": f"Churn risk: {activity['churn_probability']:.0%} • Revenue at risk: ${activity['revenue_at_risk']/1000:.0f}K • Strategy: {activity['intervention']}",
+                "status": "executing" if activity.get('execution_result', {}).get('overall_status') == 'successful' else 'failed',
+                "urgency": "critical" if activity['churn_probability'] >= 0.9 else "high",
+                "timestamp": "2 min ago",
+                "metadata": {
+                    "customer": activity['customer'],
+                    "churn_probability": activity['churn_probability'],
+                    "revenue_at_risk": activity['revenue_at_risk'],
+                    "intervention": activity['intervention'],
+                    "confidence": activity.get('confidence', 0)
+                }
+            })
+        elif activity.get('type') == 'intervention_follow_up':
+            outcome_icon = "✅" if activity.get('outcome') == 'success' else "⚠️"
+            status = 'success' if activity.get('outcome') == 'success' else 'monitoring'
+            
+            formatted_activities.append({
+                "id": f"followup_{activity.get('intervention_id', 'unknown')}",
+                "type": "intervention_followup",
+                "title": f"{outcome_icon} Follow-up: {activity['customer']}",
+                "description": f"Churn risk: {activity['probability_before']:.0%} → {activity['probability_after']:.0%} • Improvement: {activity['improvement']:+.0%}",
+                "status": status,
+                "urgency": "low",
+                "timestamp": "15 min ago",
+                "metadata": {
+                    "customer": activity['customer'],
+                    "improvement": activity['improvement'],
+                    "revenue_impact": activity.get('revenue_impact', 0)
+                }
+            })
+    
+    return {"activities": formatted_activities}
 
 @app.get("/api/customers/at-risk")
 async def get_at_risk_customers(db: Session = Depends(get_db)):
@@ -482,7 +542,7 @@ def generate_activity_title(activity: AgentActivity) -> str:
                 metadata = activity.activity_metadata
             elif isinstance(activity.activity_metadata, str):
                 try:
-                    metadata = json.loads(activity.activity_metadata)
+                    metadata = activity.activity_metadata or {}
                 except:
                     metadata = {}
             else:
