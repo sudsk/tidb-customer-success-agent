@@ -241,7 +241,7 @@ async def trigger_agent(db: Session = Depends(get_db)):
     try:
         # Get real data from TiDB
         total_customers = db.query(Customer).count()
-        high_risk_customers = db.query(Customer).filter(Customer.churn_probability >= 0.75).all()
+        high_risk_customers = db.query(Customer).filter(Customer.churn_probability >= 0.60).all()
         
         # Check if enhanced tables exist
         try:
