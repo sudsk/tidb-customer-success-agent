@@ -76,7 +76,7 @@ const ChurnDashboard = () => {
     
     try {
       // Call enhanced agent that uses real TiDB data
-      const response = await apiService.triggerEnhancedAgent();
+      const response = await apiService.triggerAgent();
       
       if (response.status === 'success') {
         // Update save counter with real results
