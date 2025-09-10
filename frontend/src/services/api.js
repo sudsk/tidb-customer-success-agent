@@ -42,5 +42,10 @@ export const apiService = {
   async getTiDBFeaturesDemo() {
     const response = await axios.get(`${API_BASE}/tidb/features-demo`);
     return response.data;
-  }
+  },
+
+  async triggerEnhancedAgent() {
+    const response = await axios.post(`${API_BASE}/tidb/features-demo`);
+    return response.data;
+  }  
 };
