@@ -472,7 +472,7 @@ async def get_real_time_activities(db: Session = Depends(get_db)):
         activities = []
         for activity in recent_activities:
             try:
-                metadata = json.loads(activity.activity_metadata or "{}")
+                metadata = activity.activity_metadata or {}
                 
                 # Map database activity types to frontend display
                 activity_data = {
