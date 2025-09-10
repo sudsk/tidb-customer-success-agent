@@ -72,22 +72,12 @@ const ChurnDashboard = () => {
   };
 
   const triggerAgent = async () => {
-    console.log("🔴 DEBUG: Trigger button clicked");
     setIsAgentRunning(true);
     
     try {
-      console.log("🔴 DEBUG: About to call triggerAgent API...");
-      
       const response = await apiService.triggerAgent();
-      
-      // Log the FULL response to see what's actually returned
-      console.log("🔴 DEBUG: FULL API Response:", JSON.stringify(response, null, 2));
-      console.log("🔴 DEBUG: Response status:", response.status);
-      console.log("🔴 DEBUG: Response message:", response.message);
-      
+
       if (response.status === 'success') {
-        console.log("🔴 DEBUG: Success! Interventions executed:", response.interventions_executed);
-        
         // Update save counter with real results
         setSaveCounter(prev => prev + (response.interventions_executed || 1));
         
@@ -96,12 +86,8 @@ const ChurnDashboard = () => {
           setRecentSaves(prev => ['Customer', ...prev.slice(0, 4)]);
         }
       } else {
-        console.error("🔴 DEBUG: Response status not success:", response);
-        console.error("🔴 DEBUG: Error message:", response.message);
-        
         // Still refresh data even if there's an error - maybe activities were created
         setTimeout(async () => {
-          console.log("🔴 DEBUG: Refreshing data despite error...");
           await fetchDashboardData();
           setIsAgentRunning(false);
         }, 2000);
@@ -109,27 +95,12 @@ const ChurnDashboard = () => {
       }
       
       // Refresh data to show new activities from database
-      console.log("🔴 DEBUG: About to refresh dashboard data...");
       setTimeout(async () => {
         await fetchDashboardData();
-        console.log("🔴 DEBUG: Dashboard data refreshed");
         setIsAgentRunning(false);
       }, 3000);
   
     } catch (error) {
-      console.error("🔴 DEBUG: API Error:", error);
-      console.error("🔴 DEBUG: Error details:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        statusText: error.response?.statusText
-      });
-      
-      // If it's a network error, the response might be in error.response.data
-      if (error.response?.data) {
-        console.error("🔴 DEBUG: Server error response:", JSON.stringify(error.response.data, null, 2));
-      }
-      
       setIsAgentRunning(false);
     }
   };
