@@ -377,8 +377,6 @@ async def get_tidb_features_demo(db: Session = Depends(get_db)):
         logger.error(f"Error in TiDB features demo: {e}")
         return {"error": "TiDB features demo failed", "details": str(e)}
 
-# backend/app.py - Enhanced agent trigger with real data and persistence
-
 @app.post("/api/agent/trigger-enhanced")
 async def trigger_enhanced_agent(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Enhanced agent trigger that uses real TiDB data and persists demo activities"""
