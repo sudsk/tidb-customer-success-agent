@@ -331,7 +331,7 @@ class TiDBService:
             activities = []
             for activity in recent_activities:
                 try:
-                    logger.info(activity.activity_metadata)
+                    logger.error(activity.activity_metadata)
                     metadata = activity.activity_metadata or {}
                     activities.append({
                         'id': activity.id,
