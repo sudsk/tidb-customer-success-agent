@@ -78,10 +78,12 @@ const ChurnDashboard = () => {
     try {
       console.log("🔴 DEBUG: About to call triggerAgent API...");
       
-      // Make sure you're calling the RIGHT endpoint name
-      const response = await apiService.triggerAgent(); // NOT triggerEnhancedAgent
+      const response = await apiService.triggerAgent();
       
-      console.log("🔴 DEBUG: API Response:", response);
+      // Log the FULL response to see what's actually returned
+      console.log("🔴 DEBUG: FULL API Response:", JSON.stringify(response, null, 2));
+      console.log("🔴 DEBUG: Response status:", response.status);
+      console.log("🔴 DEBUG: Response message:", response.message);
       
       if (response.status === 'success') {
         console.log("🔴 DEBUG: Success! Interventions executed:", response.interventions_executed);
@@ -94,7 +96,16 @@ const ChurnDashboard = () => {
           setRecentSaves(prev => ['Customer', ...prev.slice(0, 4)]);
         }
       } else {
-        console.log("🔴 DEBUG: Response status not success:", response);
+        console.error("🔴 DEBUG: Response status not success:", response);
+        console.error("🔴 DEBUG: Error message:", response.message);
+        
+        // Still refresh data even if there's an error - maybe activities were created
+        setTimeout(async () => {
+          console.log("🔴 DEBUG: Refreshing data despite error...");
+          await fetchDashboardData();
+          setIsAgentRunning(false);
+        }, 2000);
+        return; // Don't continue processing
       }
       
       // Refresh data to show new activities from database
@@ -110,11 +121,19 @@ const ChurnDashboard = () => {
       console.error("🔴 DEBUG: Error details:", {
         message: error.message,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
+        statusText: error.response?.statusText
       });
+      
+      // If it's a network error, the response might be in error.response.data
+      if (error.response?.data) {
+        console.error("🔴 DEBUG: Server error response:", JSON.stringify(error.response.data, null, 2));
+      }
+      
       setIsAgentRunning(false);
     }
   };
+  
   if (isLoading) {
     return (
       <div className="loading-container">
