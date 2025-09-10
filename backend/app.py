@@ -558,31 +558,6 @@ def format_timestamp(created_at) -> str:
     except:
         return "Recently"
 
-
-@app.get("/api/debug/activities")
-async def debug_activities(db: Session = Depends(get_db)):
-    """Debug endpoint to see raw activity data"""
-    
-    try:
-        activities = db.query(AgentActivity).limit(5).all()
-        
-        debug_data = []
-        for activity in activities:
-            debug_info = {
-                "id": activity.id,
-                "activity_type": activity.activity_type,
-                "description": activity.description,
-                "metadata_type": str(type(activity.activity_metadata)),
-                "metadata_value": str(activity.activity_metadata)[:200],  # First 200 chars
-                "metadata_raw": activity.activity_metadata
-            }
-            debug_data.append(debug_info)
-        
-        return {"debug_activities": debug_data}
-        
-    except Exception as e:
-        return {"error": str(e)}
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
