@@ -473,47 +473,71 @@ def generate_activity_title(activity: AgentActivity) -> str:
     """Generate display title based on activity type and metadata"""
     
     try:
-        # Handle metadata safely - it might already be a dict or a JSON string
-        if activity.activity_metadata:
-            if isinstance(activity.activity_metadata, str):
-                metadata = json.loads(activity.activity_metadata)
-            elif isinstance(activity.activity_metadata, dict):
+        # Handle metadata safely - don't parse JSON at all, just access the raw data
+        metadata = {}
+        
+        # Try to get metadata without JSON parsing
+        if hasattr(activity, 'activity_metadata') and activity.activity_metadata:
+            if isinstance(activity.activity_metadata, dict):
                 metadata = activity.activity_metadata
+            elif isinstance(activity.activity_metadata, str):
+                try:
+                    metadata = json.loads(activity.activity_metadata)
+                except:
+                    metadata = {}
             else:
                 metadata = {}
-        else:
-            metadata = {}
         
-        if activity.activity_type == "customer_analysis":
+        # Generate titles based on activity type
+        activity_type = getattr(activity, 'activity_type', 'unknown')
+        
+        if activity_type == "customer_analysis":
             customers = metadata.get("customers_analyzed", 0)
             memories = metadata.get("memories_available", 0)
             return f"🔍 AI Agent: Analyzing {customers} customer profiles using {memories} successful case studies"
             
-        elif activity.activity_type == "strategy_selection":
+        elif activity_type == "strategy_selection":
             customer = metadata.get("customer_name", "customer")
             cases = metadata.get("similar_cases", 0)
             return f"🧠 AI Agent: Found {cases} similar successful strategies for {customer}"
             
-        elif activity.activity_type == "communication_insight":
+        elif activity_type == "communication_insight":
             customer = metadata.get("customer_name", "customer")
             messages = metadata.get("messages_analyzed", 0)
             return f"📞 AI Agent: Analyzed {messages} communications from {customer} to identify pain points"
             
-        elif activity.activity_type == "customer_saved":
+        elif activity_type == "customer_saved":
             customer = metadata.get("customer_name", "customer")
             revenue = metadata.get("revenue_saved", 0)
             return f"✅ CUSTOMER SAVED: {customer} • ${revenue/1000:.0f}K revenue secured"
             
-        elif activity.activity_type == "agent_learning":
+        elif activity_type == "agent_learning":
             interventions = metadata.get("interventions_processed", 0)
             return f"📈 AI Agent: Learning from {interventions} successful interventions to improve future performance"
             
         else:
-            return activity.description or f"Agent Activity: {activity.activity_type}"
+            # Fallback to description or simple title
+            description = getattr(activity, 'description', None)
+            if description:
+                return description
+            else:
+                return f"Agent Activity: {activity_type}"
             
     except Exception as e:
-        logger.error(f"Error generating title for activity {getattr(activity, 'id', 'unknown')}: {e}")
-        return activity.description or f"Agent Activity: {activity.activity_type}"
+        # Ultimate fallback - no JSON parsing, no metadata access
+        try:
+            description = getattr(activity, 'description', None)
+            activity_type = getattr(activity, 'activity_type', 'unknown')
+            activity_id = getattr(activity, 'id', 'unknown')
+            
+            logger.error(f"Title generation failed for activity {activity_id}: {e}")
+            
+            if description:
+                return description
+            else:
+                return f"Agent Activity: {activity_type}"
+        except:
+            return "Agent Activity"
 
 def format_timestamp(created_at) -> str:
     """Format timestamp for display"""
