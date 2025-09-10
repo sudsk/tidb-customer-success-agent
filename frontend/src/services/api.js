@@ -45,7 +45,12 @@ export const apiService = {
   },
 
   async triggerEnhancedAgent() {
-    const response = await axios.post(`${API_BASE}/tidb/features-demo`);
+    const response = await axios.post(`${API_BASE}/agent/trigger-enhanced`);
+    return response.data;
+  },
+
+  async getRealTimeActivities() {
+    const response = await axios.get(`${API_BASE}/activities/real-time`);
     return response.data;
   }  
 };
