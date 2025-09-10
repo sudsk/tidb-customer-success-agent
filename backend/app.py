@@ -18,12 +18,6 @@ from utils.mock_data import initialize_customer_data
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Suppress SQLAlchemy engine logs
-logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
-logging.getLogger('sqlalchemy.dialects').setLevel(logging.WARNING)
-logging.getLogger('sqlalchemy.pool').setLevel(logging.WARNING)
-logging.getLogger('sqlalchemy.orm').setLevel(logging.WARNING)
-
 # Global agent task
 agent_task = None
 latest_activities = []
@@ -479,7 +473,16 @@ def generate_activity_title(activity: AgentActivity) -> str:
     """Generate display title based on activity type and metadata"""
     
     try:
-        metadata = json.loads(activity.activity_metadata or "{}")
+        # Handle metadata safely - it might already be a dict or a JSON string
+        if activity.activity_metadata:
+            if isinstance(activity.activity_metadata, str):
+                metadata = json.loads(activity.activity_metadata)
+            elif isinstance(activity.activity_metadata, dict):
+                metadata = activity.activity_metadata
+            else:
+                metadata = {}
+        else:
+            metadata = {}
         
         if activity.activity_type == "customer_analysis":
             customers = metadata.get("customers_analyzed", 0)
@@ -508,7 +511,8 @@ def generate_activity_title(activity: AgentActivity) -> str:
         else:
             return activity.description or f"Agent Activity: {activity.activity_type}"
             
-    except:
+    except Exception as e:
+        logger.error(f"Error generating title for activity {getattr(activity, 'id', 'unknown')}: {e}")
         return activity.description or f"Agent Activity: {activity.activity_type}"
 
 def format_timestamp(created_at) -> str:
