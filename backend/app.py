@@ -2,12 +2,14 @@
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 import asyncio
 import logging
+import json
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-from models.database import create_tables, get_db
+from models.database import create_tables, get_db, Customer, ChurnIntervention, AgentActivity
 from services.agent_service import AutonomousCustomerSuccessAgent
 from services.tidb_service import TiDBService
 from utils.mock_data import initialize_customer_data
@@ -318,7 +320,6 @@ async def get_recent_interventions(db: Session = Depends(get_db)):
     
     return {"interventions": interventions_data}
 
-
 @app.get("/api/tidb/features-demo")
 async def get_tidb_features_demo(db: Session = Depends(get_db)):
     """Demonstrate TiDB enhanced features for hackathon"""
@@ -519,11 +520,11 @@ async def get_real_time_activities(db: Session = Depends(get_db)):
                 activity_data = {
                     "id": f"db_activity_{activity.id}",
                     "type": activity.activity_type,
-                    "title": self._generate_activity_title(activity),
+                    "title": _generate_activity_title(activity),
                     "description": activity.description,
                     "status": "success" if activity.status == "completed" else activity.status,
                     "urgency": activity.urgency_level,
-                    "timestamp": self._format_timestamp(activity.created_at),
+                    "timestamp": _format_timestamp(activity.created_at),
                     "metadata": metadata
                 }
                 activities.append(activity_data)
@@ -537,6 +538,35 @@ async def get_real_time_activities(db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error getting real-time activities: {e}")
         return {"activities": []}
+
+# Add missing API endpoint for getRealTimeStats
+@app.get("/api/stats/realtime")
+async def get_realtime_stats(db: Session = Depends(get_db)):
+    """Get real-time statistics for dashboard"""
+    
+    try:
+        total_customers = db.query(Customer).count()
+        high_risk_customers = db.query(Customer).filter(Customer.churn_probability >= 0.6).count()
+        
+        # Get agent memories and communications count
+        agent_memories = db.execute(text("SELECT COUNT(*) as count FROM agent_memory")).fetchone()
+        communications = db.execute(text("SELECT COUNT(*) as count FROM customer_communications")).fetchone()
+        
+        return {
+            "totalCustomers": total_customers,
+            "highRiskCustomers": high_risk_customers,
+            "agentMemories": agent_memories.count if agent_memories else 0,
+            "communications": communications.count if communications else 0
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting real-time stats: {e}")
+        return {
+            "totalCustomers": 0,
+            "highRiskCustomers": 0,
+            "agentMemories": 0,
+            "communications": 0
+        }
 
 def _generate_activity_title(activity: AgentActivity) -> str:
     """Generate display title based on activity type and metadata"""
