@@ -341,7 +341,7 @@ class TiDBService:
                         'metadata': metadata
                     })
                 except Exception as e:
-                    logger.error(f"Error processing activit y {activity.id}: {e}")
+                    logger.error(f"Error processing activity {activity.id}: {e}")
                     continue
             
             # Get current system status
