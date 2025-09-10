@@ -4,6 +4,7 @@ import axios from 'axios';
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
 export const apiService = {
+  // Core dashboard endpoints
   async getDashboardMetrics() {
     const response = await axios.get(`${API_BASE}/dashboard/metrics`);
     return response.data;
@@ -19,6 +20,7 @@ export const apiService = {
     return response.data;
   },
 
+  // Analytics endpoints
   async getChurnAnalytics() {
     const response = await axios.get(`${API_BASE}/analytics/churn`);
     return response.data;
@@ -34,23 +36,20 @@ export const apiService = {
     return response.data;
   },
 
+  // Single unified agent trigger
   async triggerAgent() {
     const response = await axios.post(`${API_BASE}/agent/trigger`);
     return response.data;
   },
 
-  async getTiDBFeaturesDemo() {
-    const response = await axios.get(`${API_BASE}/tidb/features-demo`);
-    return response.data;
-  },
-
-  async triggerEnhancedAgent() {
-    const response = await axios.post(`${API_BASE}/agent/trigger-enhanced`);
-    return response.data;
-  },
-
+  // Real-time data endpoints
   async getRealTimeActivities() {
     const response = await axios.get(`${API_BASE}/activities/real-time`);
     return response.data;
-  }  
+  },
+
+  async getRealTimeStats() {
+    const response = await axios.get(`${API_BASE}/realtime/stats`);
+    return response.data;
+  }
 };
