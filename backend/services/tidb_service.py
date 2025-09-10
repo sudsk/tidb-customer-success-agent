@@ -331,7 +331,7 @@ class TiDBService:
             activities = []
             for activity in recent_activities:
                 try:
-                    metadata = json.loads(activity.activity_metadata or "{}")
+                    metadata = activity.activity_metadata or {}
                     activities.append({
                         'id': activity.id,
                         'type': activity.activity_type,
