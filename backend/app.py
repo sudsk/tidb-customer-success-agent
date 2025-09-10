@@ -18,6 +18,12 @@ from utils.mock_data import initialize_customer_data
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Suppress SQLAlchemy engine logs
+logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
+logging.getLogger('sqlalchemy.dialects').setLevel(logging.WARNING)
+logging.getLogger('sqlalchemy.pool').setLevel(logging.WARNING)
+logging.getLogger('sqlalchemy.orm').setLevel(logging.WARNING)
+
 # Global agent task
 agent_task = None
 latest_activities = []
@@ -181,47 +187,7 @@ async def get_dashboard_metrics(db: Session = Depends(get_db)):
 @app.get("/api/dashboard/activities")
 async def get_recent_activities():
     """Get recent agent activities from database"""
-    
-    formatted_activities = []
-    
-    for activity in latest_activities[-15:]:
-        if activity.get('type') == 'churn_intervention':
-            formatted_activities.append({
-                "id": f"intervention_{activity.get('intervention_id', 'unknown')}",
-                "type": "churn_intervention", 
-                "title": f"🚨 Customer at Risk: {activity['customer']} ({activity['company']})",
-                "description": f"Churn risk: {activity['churn_probability']:.0%} • Revenue at risk: ${activity['revenue_at_risk']/1000:.0f}K • Strategy: {activity['intervention']}",
-                "status": "executing" if activity.get('execution_result', {}).get('overall_status') == 'successful' else 'failed',
-                "urgency": "critical" if activity['churn_probability'] >= 0.9 else "high",
-                "timestamp": "2 min ago",
-                "metadata": {
-                    "customer": activity['customer'],
-                    "churn_probability": activity['churn_probability'],
-                    "revenue_at_risk": activity['revenue_at_risk'],
-                    "intervention": activity['intervention'],
-                    "confidence": activity.get('confidence', 0)
-                }
-            })
-        elif activity.get('type') == 'intervention_follow_up':
-            outcome_icon = "✅" if activity.get('outcome') == 'success' else "⚠️"
-            status = 'success' if activity.get('outcome') == 'success' else 'monitoring'
-            
-            formatted_activities.append({
-                "id": f"followup_{activity.get('intervention_id', 'unknown')}",
-                "type": "intervention_followup",
-                "title": f"{outcome_icon} Follow-up: {activity['customer']}",
-                "description": f"Churn risk: {activity['probability_before']:.0%} → {activity['probability_after']:.0%} • Improvement: {activity['improvement']:+.0%}",
-                "status": status,
-                "urgency": "low",
-                "timestamp": "15 min ago",
-                "metadata": {
-                    "customer": activity['customer'],
-                    "improvement": activity['improvement'],
-                    "revenue_impact": activity.get('revenue_impact', 0)
-                }
-            })
-    
-    return {"activities": formatted_activities}
+    return await get_real_time_activities()
 
 @app.get("/api/customers/at-risk")
 async def get_at_risk_customers(db: Session = Depends(get_db)):
@@ -295,12 +261,12 @@ async def trigger_agent(db: Session = Depends(get_db)):
             activity_type="customer_analysis",
             description=f"Agent scanning {total_customers} customer profiles • Finding similar cases from {agent_memories} successful interventions • {len(high_risk_customers)} customers identified as high-risk",
             urgency_level="high",
-            activity_metadata=json.dumps({
+            activity_metadata={
                 "customers_analyzed": total_customers,
                 "memories_available": agent_memories,
                 "high_risk_found": len(high_risk_customers),
                 "communications_available": communications
-            })
+            }
         )
         db.add(analysis_activity)
         db.flush()  # Get the ID without committing
@@ -314,12 +280,12 @@ async def trigger_agent(db: Session = Depends(get_db)):
                 activity_type="strategy_selection", 
                 description=f"Agent found {agent_memories} similar cases for {customer.name} • Using proven strategies from past successes • Confidence level calculated based on historical data",
                 urgency_level="medium",
-                activity_metadata=json.dumps({
+                activity_metadata={
                     "customer_name": customer.name,
                     "similar_cases": min(agent_memories, 5),
                     "churn_probability": customer.churn_probability,
                     "revenue_at_risk": customer.annual_contract_value
-                })
+                }
             )
             db.add(strategy_activity)
             
@@ -336,11 +302,11 @@ async def trigger_agent(db: Session = Depends(get_db)):
                             activity_type="communication_insight",
                             description=f"Agent analyzed {customer_comms} recent messages from {customer.name} • Sentiment analysis completed • Key pain points identified for targeted intervention",
                             urgency_level="high",
-                            activity_metadata=json.dumps({
+                            activity_metadata={
                                 "customer_name": customer.name,
                                 "messages_analyzed": customer_comms,
                                 "analysis_type": "sentiment_and_intent"
-                            })
+                            }
                         )
                         db.add(comm_activity)
                 except Exception as e:
@@ -363,13 +329,13 @@ async def trigger_agent(db: Session = Depends(get_db)):
                         activity_type="customer_saved",
                         description=f"Customer {customer.name} successfully rescued • Churn risk reduced from {customer.churn_probability:.0%} to estimated 25% • ${customer.annual_contract_value/1000:.0f}K revenue secured",
                         urgency_level="low",
-                        activity_metadata=json.dumps({
+                        activity_metadata={
                             "customer_name": customer.name,
                             "revenue_saved": customer.annual_contract_value,
                             "risk_before": customer.churn_probability,
                             "risk_after": 0.25,
                             "intervention_type": intervention_result.get("intervention", "targeted_outreach")
-                        })
+                        }
                     )
                     db.add(save_activity)
             except Exception as e:
@@ -380,12 +346,12 @@ async def trigger_agent(db: Session = Depends(get_db)):
                     activity_type="customer_saved",
                     description=f"Customer {customer.name} successfully rescued • Churn risk reduced from {customer.churn_probability:.0%} to estimated 25% • ${customer.annual_contract_value/1000:.0f}K revenue secured",
                     urgency_level="low",
-                    activity_metadata=json.dumps({
+                    activity_metadata={
                         "customer_name": customer.name,
                         "revenue_saved": customer.annual_contract_value,
                         "risk_before": customer.churn_probability,
                         "risk_after": 0.25
-                    })
+                    }
                 )
                 db.add(save_activity)
                 intervention_results.append({"customer": customer.name, "intervention": "basic_outreach"})
@@ -397,11 +363,11 @@ async def trigger_agent(db: Session = Depends(get_db)):
                 activity_type="agent_learning",
                 description=f"Agent updated retention patterns based on {len(intervention_results)} new interventions • Strategy effectiveness confirmed • Similar future cases will benefit from this learning",
                 urgency_level="low",
-                activity_metadata=json.dumps({
+                activity_metadata={
                     "interventions_processed": len(intervention_results),
                     "patterns_updated": 1,
                     "learning_type": "success_pattern_reinforcement"
-                })
+                }
             )
             db.add(learning_activity)
         
@@ -464,7 +430,6 @@ async def get_real_time_activities(db: Session = Depends(get_db)):
     """Get real-time activities from database"""
     
     try:
-        # Get recent activities from database
         recent_activities = db.query(AgentActivity).order_by(
             AgentActivity.created_at.desc()
         ).limit(20).all()
@@ -472,16 +437,16 @@ async def get_real_time_activities(db: Session = Depends(get_db)):
         activities = []
         for activity in recent_activities:
             try:
-                metadata = json.loads(activity.activity_metadata or "{}")
+                # Metadata is always a dict (SQLAlchemy deserializes JSON automatically)
+                metadata = activity.activity_metadata or {}
                 
-                # Map database activity types to frontend display
                 activity_data = {
                     "id": f"db_activity_{activity.id}",
                     "type": activity.activity_type,
                     "title": generate_activity_title(activity),
                     "description": activity.description,
-                    "status": "success" if activity.status == "completed" else activity.status,
-                    "urgency": activity.urgency_level,
+                    "status": "success" if activity.status == "completed" else (activity.status or "active"),
+                    "urgency": activity.urgency_level or "medium",
                     "timestamp": format_timestamp(activity.created_at),
                     "metadata": metadata
                 }
@@ -489,7 +454,17 @@ async def get_real_time_activities(db: Session = Depends(get_db)):
                 
             except Exception as e:
                 logger.error(f"Error processing activity {activity.id}: {e}")
-                continue
+                # Include with fallback data
+                activities.append({
+                    "id": f"db_activity_{activity.id}",
+                    "type": activity.activity_type or "unknown",
+                    "title": activity.description or f"Agent Activity {activity.id}",
+                    "description": activity.description or "Agent activity",
+                    "status": "success",
+                    "urgency": "medium",
+                    "timestamp": format_timestamp(activity.created_at),
+                    "metadata": {}
+                })
         
         return {"activities": activities}
         
@@ -533,71 +508,47 @@ def generate_activity_title(activity: AgentActivity) -> str:
     """Generate display title based on activity type and metadata"""
     
     try:
-        # Handle metadata safely - don't parse JSON at all, just access the raw data
-        metadata = {}
+        # Metadata is always a dict (SQLAlchemy deserializes JSON automatically)
+        metadata = activity.activity_metadata or {}
         
-        # Try to get metadata without JSON parsing
-        if hasattr(activity, 'activity_metadata') and activity.activity_metadata:
-            if isinstance(activity.activity_metadata, dict):
-                metadata = activity.activity_metadata
-            elif isinstance(activity.activity_metadata, str):
-                try:
-                    metadata = json.loads(activity.activity_metadata)
-                except:
-                    metadata = {}
-            else:
-                metadata = {}
-        
-        # Generate titles based on activity type
-        activity_type = getattr(activity, 'activity_type', 'unknown')
-        
-        if activity_type == "customer_analysis":
+        if activity.activity_type == "customer_analysis":
             customers = metadata.get("customers_analyzed", 0)
             memories = metadata.get("memories_available", 0)
             return f"🔍 AI Agent: Analyzing {customers} customer profiles using {memories} successful case studies"
             
-        elif activity_type == "strategy_selection":
+        elif activity.activity_type == "strategy_selection":
             customer = metadata.get("customer_name", "customer")
             cases = metadata.get("similar_cases", 0)
             return f"🧠 AI Agent: Found {cases} similar successful strategies for {customer}"
             
-        elif activity_type == "communication_insight":
+        elif activity.activity_type == "communication_insight":
             customer = metadata.get("customer_name", "customer")
             messages = metadata.get("messages_analyzed", 0)
             return f"📞 AI Agent: Analyzed {messages} communications from {customer} to identify pain points"
             
-        elif activity_type == "customer_saved":
+        elif activity.activity_type == "customer_saved":
             customer = metadata.get("customer_name", "customer")
             revenue = metadata.get("revenue_saved", 0)
             return f"✅ CUSTOMER SAVED: {customer} • ${revenue/1000:.0f}K revenue secured"
             
-        elif activity_type == "agent_learning":
+        elif activity.activity_type == "agent_learning":
             interventions = metadata.get("interventions_processed", 0)
             return f"📈 AI Agent: Learning from {interventions} successful interventions to improve future performance"
             
+        # Handle existing activity types from your database
+        elif activity.activity_type == "churn_detected":
+            churn_prob = metadata.get("churn_probability", 0)
+            return f"🚨 High churn risk detected: {churn_prob:.0%} probability"
+            
+        elif activity.activity_type == "intervention_started":
+            return f"🔧 Intervention started for customer"
+            
         else:
-            # Fallback to description or simple title
-            description = getattr(activity, 'description', None)
-            if description:
-                return description
-            else:
-                return f"Agent Activity: {activity_type}"
+            return activity.description or f"Agent Activity: {activity.activity_type}"
             
     except Exception as e:
-        # Ultimate fallback - no JSON parsing, no metadata access
-        try:
-            description = getattr(activity, 'description', None)
-            activity_type = getattr(activity, 'activity_type', 'unknown')
-            activity_id = getattr(activity, 'id', 'unknown')
-            
-            logger.error(f"Title generation failed for activity {activity_id}: {e}")
-            
-            if description:
-                return description
-            else:
-                return f"Agent Activity: {activity_type}"
-        except:
-            return "Agent Activity"
+        logger.error(f"Error generating title for activity {getattr(activity, 'id', 'unknown')}: {e}")
+        return activity.description or f"Agent Activity: {getattr(activity, 'activity_type', 'unknown')}"
 
 def format_timestamp(created_at) -> str:
     """Format timestamp for display"""
