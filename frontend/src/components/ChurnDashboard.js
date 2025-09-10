@@ -72,34 +72,49 @@ const ChurnDashboard = () => {
   };
 
   const triggerAgent = async () => {
+    console.log("🔴 DEBUG: Trigger button clicked");
     setIsAgentRunning(true);
     
     try {
-      // Call enhanced agent that uses real TiDB data
-      const response = await apiService.triggerAgent();
+      console.log("🔴 DEBUG: About to call triggerAgent API...");
+      
+      // Make sure you're calling the RIGHT endpoint name
+      const response = await apiService.triggerAgent(); // NOT triggerEnhancedAgent
+      
+      console.log("🔴 DEBUG: API Response:", response);
       
       if (response.status === 'success') {
+        console.log("🔴 DEBUG: Success! Interventions executed:", response.interventions_executed);
+        
         // Update save counter with real results
-        setSaveCounter(prev => prev + response.interventions_executed);
+        setSaveCounter(prev => prev + (response.interventions_executed || 1));
         
         // Add customers that were actually saved to recent saves
         if (response.interventions_executed > 0) {
           setRecentSaves(prev => ['Customer', ...prev.slice(0, 4)]);
         }
+      } else {
+        console.log("🔴 DEBUG: Response status not success:", response);
       }
       
       // Refresh data to show new activities from database
-      setTimeout(() => {
-        fetchDashboardData();
+      console.log("🔴 DEBUG: About to refresh dashboard data...");
+      setTimeout(async () => {
+        await fetchDashboardData();
+        console.log("🔴 DEBUG: Dashboard data refreshed");
         setIsAgentRunning(false);
       }, 3000);
-
+  
     } catch (error) {
-      console.error('Failed to trigger enhanced agent:', error);
+      console.error("🔴 DEBUG: API Error:", error);
+      console.error("🔴 DEBUG: Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       setIsAgentRunning(false);
     }
   };
-
   if (isLoading) {
     return (
       <div className="loading-container">
