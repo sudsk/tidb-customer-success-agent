@@ -1,0 +1,61 @@
+# Add these lines to your existing .gitignore file
+
+# === FRONTEND SPECIFIC (React/Node.js) ===
+# Node.js dependencies
+frontend/node_modules/
+frontend/.pnp
+frontend/.pnp.js
+
+# Production build (exclude from repo, gets built during deployment)
+frontend/build/
+
+# Environment files (contain sensitive backend URLs)
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/.env.production
+
+# npm/yarn logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# === BACKEND SPECIFIC (Python/FastAPI) ===
+# Environment files with secrets
+backend/.env
+backend/.env.local
+backend/.env.production
+
+# === PROJECT SPECIFIC ===
+# Database files (if any local testing)
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Logs
+*.log
+logs/
+
+# === KEEP THESE IMPORTANT FILES ===
+# DO NOT ignore these - they're needed for hackathon:
+# !frontend/package.json
+# !frontend/package-lock.json  
+# !backend/requirements.txt
+# !backend/Dockerfile
+# !frontend/Dockerfile
