@@ -271,7 +271,7 @@ async def load_customers(db: Session):
         monthly_revenue = random.randint(min_rev, max_rev)
         
         # Generate realistic churn probability based on characteristics
-        base_churn = random.uniform(0.1, 0.8)
+        base_churn = random.uniform(0.1, 0.65)
         
         # Adjust based on usage and satisfaction
         feature_usage = random.uniform(0.1, 0.9)
@@ -281,12 +281,12 @@ async def load_customers(db: Session):
         
         # Calculate final churn probability
         churn_prob = base_churn
-        if feature_usage < 0.3: churn_prob += 0.2
-        if nps < 6: churn_prob += 0.15
-        if support_tickets > 8: churn_prob += 0.1
-        if last_login > 14: churn_prob += 0.15
+        if feature_usage < 0.3: churn_prob += 0.15
+        if nps < 6: churn_prob += 0.10
+        if support_tickets > 8: churn_prob += 0.08
+        if last_login > 14: churn_prob += 0.12
         
-        churn_prob = min(0.95, max(0.05, churn_prob))
+        churn_prob = min(0.85, max(0.05, churn_prob))
         
         if churn_prob >= 0.8:
             risk_level = "critical"
