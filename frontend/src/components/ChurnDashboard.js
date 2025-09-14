@@ -22,6 +22,9 @@ const ChurnDashboard = () => {
     highRiskCustomers: 0
   });
   const [isResetting, setIsResetting] = useState(false);
+  const [isAgentCycleRunning, setIsAgentCycleRunning] = useState(false);
+  const [agentCycleStatus, setAgentCycleStatus] = useState('stopped'); // stopped, starting, running, stopping
+
   
   useEffect(() => {
     fetchDashboardData();
@@ -73,6 +76,77 @@ const ChurnDashboard = () => {
       console.error('Failed to fetch real-time stats:', error);
     }
   };
+
+  // Add this new function to control agent cycle
+  const toggleAgentCycle = async () => {
+    if (isAgentCycleRunning) {
+      // Stop the agent cycle
+      try {
+        setAgentCycleStatus('stopping');
+        const response = await apiService.stopAgentCycle();
+        
+        if (response.status === 'success') {
+          setIsAgentCycleRunning(false);
+          setAgentCycleStatus('stopped');
+          console.log('✅ Agent cycle stopped');
+        }
+      } catch (error) {
+        console.error('Failed to stop agent cycle:', error);
+        setAgentCycleStatus('running'); // Revert status
+      }
+    } else {
+      // Start the agent cycle
+      try {
+        setAgentCycleStatus('starting');
+        const response = await apiService.startAgentCycle();
+        
+        if (response.status === 'success') {
+          setIsAgentCycleRunning(true);
+          setAgentCycleStatus('running');
+          console.log('✅ Agent cycle started');
+          
+          // Refresh data more frequently when agent is running
+          const agentInterval = setInterval(() => {
+            fetchDashboardData();
+            fetchRealTimeStats();
+          }, 10000); // Every 10 seconds when agent is running
+          
+          // Store interval ID to clear it later
+          window.agentInterval = agentInterval;
+        }
+      } catch (error) {
+        console.error('Failed to start agent cycle:', error);
+        setAgentCycleStatus('stopped'); // Revert status
+      }
+    }
+  };
+
+  // Add useEffect to check agent status on component mount
+  useEffect(() => {
+    const checkAgentStatus = async () => {
+      try {
+        const response = await apiService.getAgentCycleStatus();
+        if (response.status === 'success') {
+          setIsAgentCycleRunning(response.cycle_running);
+          setAgentCycleStatus(response.cycle_status);
+        }
+      } catch (error) {
+        console.log('Could not check agent status:', error);
+      }
+    };
+    
+    checkAgentStatus();
+  }, []);
+
+  // Add cleanup effect
+  useEffect(() => {
+    return () => {
+      // Clear interval when component unmounts
+      if (window.agentInterval) {
+        clearInterval(window.agentInterval);
+      }
+    };
+  }, []);
 
   const fetchDashboardData = async () => {
     try {
@@ -160,45 +234,87 @@ const ChurnDashboard = () => {
                 </div>
               )}
             </div>
-            <div className={`status-indicator ${isAgentRunning ? 'running' : 'active'}`}>
+            
+            <div className={`status-indicator ${isAgentCycleRunning ? 'agent-running' : (isAgentRunning ? 'running' : 'active')}`}>
               <div className="status-dot pulse"></div>
-              <span>{isAgentRunning ? 'Processing real data...' : 'Monitoring live'}</span>
+              <span>
+                {isAgentCycleRunning ? 'Agent Cycle Active' : 
+                 isAgentRunning ? 'Processing real data...' : 
+                 'Monitoring live'}
+              </span>
             </div>
-            <button 
-              className={`trigger-button ${isAgentRunning ? 'running' : ''}`}
-              onClick={triggerAgent}
-              disabled={isAgentRunning || isResetting}
-            >
-              {isAgentRunning ? (
-                <>
-                  <Loader className="spin" size={16} />
-                  Analyzing customers...
-                </>
-              ) : (
-                <>
-                  <Zap size={16} />
-                  Save Customers Now
-                </>
-              )}
-            </button>
-            <button 
-              className="reset-button"
-              onClick={resetDemo}
-              disabled={isResetting || isAgentRunning}
-              title="Reset demo for fresh demonstration"
-            >
-              {isResetting ? (
-                <>
-                  <Loader className="spin" size={14} />
-                  Resetting...
-                </>
-              ) : (
-                <>
-                  🔄 Reset Demo
-                </>
-              )}
-            </button>              
+            
+            <div className="demo-controls">
+              {/* Agent Cycle Control Button */}
+              <button 
+                className={`agent-cycle-button ${agentCycleStatus}`}
+                onClick={toggleAgentCycle}
+                disabled={agentCycleStatus === 'starting' || agentCycleStatus === 'stopping' || isResetting}
+                title={isAgentCycleRunning ? 'Stop continuous agent monitoring' : 'Start continuous agent monitoring'}
+              >
+                {agentCycleStatus === 'starting' ? (
+                  <>
+                    <Loader className="spin" size={16} />
+                    Starting...
+                  </>
+                ) : agentCycleStatus === 'stopping' ? (
+                  <>
+                    <Loader className="spin" size={16} />
+                    Stopping...
+                  </>
+                ) : isAgentCycleRunning ? (
+                  <>
+                    <Shield className="stop-icon" size={16} />
+                    Stop Agent
+                  </>
+                ) : (
+                  <>
+                    <Bot className="start-icon" size={16} />
+                    Start Agent
+                  </>
+                )}
+              </button>
+          
+              {/* Manual Trigger Button */}
+              <button 
+                className={`trigger-button ${isAgentRunning ? 'running' : ''}`}
+                onClick={triggerAgent}
+                disabled={isAgentRunning || isResetting}
+              >
+                {isAgentRunning ? (
+                  <>
+                    <Loader className="spin" size={16} />
+                    Analyzing customers...
+                  </>
+                ) : (
+                  <>
+                    <Zap size={16} />
+                    Save Customers Now
+                  </>
+                )}
+              </button>
+              
+              {/* Reset Button */}
+              <button 
+                className="reset-button"
+                onClick={resetDemo}
+                disabled={isResetting || isAgentRunning || isAgentCycleRunning}
+                title="Reset demo for fresh demonstration"
+              >
+                {isResetting ? (
+                  <>
+                    <Loader className="spin" size={14} />
+                    Resetting...
+                  </>
+                ) : (
+                  <>
+                    🔄 Reset Demo
+                  </>
+                )}
+              </button>
+            </div>
           </div>
+                
         </div>
       </header>
 
