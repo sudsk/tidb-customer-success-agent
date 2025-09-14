@@ -8,13 +8,18 @@ logger = logging.getLogger(__name__)
 
 class LLMService:
     def __init__(self):
-        """Initialize Gemini - GCP handles authentication automatically"""
-        # On Cloud Run, GCP automatically provides credentials
-        # No explicit authentication needed!
-        genai.configure()  # Uses Application Default Credentials automatically
-        
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
-        logger.info("Gemini initialized with automatic GCP authentication")
+        """Initialize Gemini via Vertex AI - uses ADC automatically"""
+        try:        
+            # Initialize Vertex AI (uses Application Default Credentials)
+            vertexai.init(project=config.GCP_PROJECT_ID, location="us-central1")
+            
+            # Use Vertex AI Gemini model
+            self.model = GenerativeModel("gemini-2.5-flash")
+            logger.info("Vertex AI Gemini initialized with ADC")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize Vertex AI Gemini: {e}")
+            raise
     
     async def analyze_enhanced_retention_strategy(self, customer_profile: Dict, 
                                                 agent_memories: List[Dict],
