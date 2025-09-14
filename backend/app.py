@@ -7,7 +7,7 @@ import asyncio
 import logging
 import json
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from models.database import create_tables, get_db, Customer, AgentActivity, ChurnIntervention
 from services.agent_service import AutonomousCustomerSuccessAgent
