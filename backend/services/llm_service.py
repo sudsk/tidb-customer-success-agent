@@ -1,4 +1,5 @@
-import google.generativeai as genai
+import vertexai
+from vertexai.generative_models import GenerativeModel
 from typing import Dict, List
 import json
 from config import config
