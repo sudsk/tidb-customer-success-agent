@@ -184,7 +184,8 @@ class LLMService:
     
     def _enhanced_fallback_strategy(self, customer_profile: Dict, 
                                   agent_memories: List[Dict], 
-                                  relationships: Dict) -> Dict:
+                                  relationships: Dict, 
+                                  similar_cases: List[Dict]) -> Dict:
         """Enhanced fallback strategy incorporating available data"""
         
         # Use memory insights if available
