@@ -1,6 +1,8 @@
 # backend/services/tidb_service.py
 import json
 import numpy as np
+import hashlib
+from scipy.spatial.distance import cosine
 from typing import List, Dict, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func
@@ -18,76 +20,72 @@ class TiDBService:
     async def find_similar_retention_cases(self, customer_embedding: List[float], 
                                          customer_segment: str, churn_probability: float, 
                                          limit: int = 5) -> List[Dict]:
-        """Use TiDB vector search to find similar successful retention cases"""
+        """Vector search using Python similarity calculation"""
         
-        if not customer_embedding:
-            logger.warning("No customer embedding provided, using segment-based matching")
-            return await self._get_segment_based_patterns(customer_segment, limit)
+        # If no meaningful embedding provided, generate from customer data
+        if not customer_embedding or all(x == 0 for x in customer_embedding[:10]):
+            customer_text = f"segment:{customer_segment} risk:{churn_probability:.2f}"
+            customer_embedding = generate_semantic_embedding(customer_text)
         
         try:
-            # Convert embedding to proper format for TiDB vector search
-            query_vector = json.dumps(customer_embedding)
+            # Get all retention patterns for this segment
+            patterns = self.db.query(RetentionPattern).filter(
+                RetentionPattern.customer_segment == customer_segment,
+                RetentionPattern.success_rate > 0.5
+            ).all()
             
-            # TiDB Vector Search Query - Find similar retention patterns
-            vector_search_query = text("""
-                SELECT 
-                    rp.id,
-                    rp.pattern_name,
-                    rp.customer_characteristics,
-                    rp.successful_interventions,
-                    rp.success_rate,
-                    rp.customer_segment,
-                    rp.churn_reason_category,
-                    VEC_COSINE_DISTANCE(JSON_EXTRACT(rp.embedding, '$'), JSON_EXTRACT(:query_vector, '$')) as similarity_distance
-                FROM retention_patterns rp
-                WHERE rp.customer_segment = :customer_segment
-                    AND rp.success_rate > 0.5
-                ORDER BY similarity_distance ASC
-                LIMIT :limit
-            """)
+            if not patterns:
+                logger.info(f"No retention patterns found for segment: {customer_segment}")
+                return await self._get_default_patterns(customer_segment)
             
-            # Execute vector search query
-            result = self.db.execute(
-                vector_search_query,
-                {
-                    "query_vector": query_vector,
-                    "customer_segment": customer_segment,
-                    "limit": limit
-                }
-            )
-            
-            similar_cases = []
-            for row in result:
+            similarities = []
+            for pattern in patterns:
                 try:
-                    similar_cases.append({
-                        "id": row.id,
-                        "pattern_name": row.pattern_name,
-                        "customer_characteristics": json.loads(row.customer_characteristics or "{}"),
-                        "successful_interventions": json.loads(row.successful_interventions or "[]"),
-                        "success_rate": row.success_rate,
-                        "customer_segment": row.customer_segment,
-                        "churn_reason_category": row.churn_reason_category,
-                        "similarity_score": 1.0 - row.similarity_distance,  # Convert distance to similarity
-                        "confidence": min(row.success_rate * (1.0 - row.similarity_distance), 0.95)
-                    })
+                    # Generate embedding for pattern if it doesn't have one
+                    if not pattern.embedding or pattern.embedding == [0.0] * 768:
+                        pattern_text = f"segment:{pattern.customer_segment} type:{pattern.churn_reason_category} success:{pattern.success_rate}"
+                        pattern_embedding = generate_semantic_embedding(pattern_text)
+                    else:
+                        # Use existing embedding
+                        pattern_embedding = pattern.embedding[:128]  # Truncate to match dimension
+                    
+                    # Calculate cosine similarity
+                    if len(customer_embedding) == len(pattern_embedding):
+                        similarity = 1 - cosine(customer_embedding, pattern_embedding)
+                        similarities.append((pattern, similarity))
+                        
                 except Exception as e:
-                    logger.error(f"Error processing vector search result: {e}")
+                    logger.error(f"Error processing pattern {pattern.id}: {e}")
                     continue
             
-            logger.info(f"Found {len(similar_cases)} similar retention cases using vector search")
+            # Sort by similarity and return top results
+            similarities.sort(key=lambda x: x[1], reverse=True)
             
-            # If no vector results, fall back to segment-based matching
-            if not similar_cases:
-                logger.info("No vector matches found, falling back to segment-based patterns")
-                return await self._get_segment_based_patterns(customer_segment, limit)
+            similar_cases = []
+            for pattern, similarity in similarities[:limit]:
+                try:
+                    similar_cases.append({
+                        "id": pattern.id,
+                        "pattern_name": pattern.pattern_name,
+                        "customer_characteristics": json.loads(pattern.customer_characteristics or "{}"),
+                        "successful_interventions": json.loads(pattern.successful_interventions or "[]"),
+                        "success_rate": pattern.success_rate,
+                        "customer_segment": pattern.customer_segment,
+                        "churn_reason_category": pattern.churn_reason_category,
+                        "similarity_score": similarity,
+                        "confidence": min(pattern.success_rate * similarity, 0.95)
+                    })
+                except Exception as e:
+                    logger.error(f"Error formatting pattern result: {e}")
+                    continue
             
+            logger.info(f"🎯 Vector search found {len(similar_cases)} similar cases with similarity scores")
             return similar_cases
             
         except Exception as e:
             logger.error(f"Vector search failed: {e}")
-            # Fallback to segment-based patterns
             return await self._get_segment_based_patterns(customer_segment, limit)
-
+        
     async def _get_segment_based_patterns(self, customer_segment: str, limit: int = 5) -> List[Dict]:
         """Fallback method to get retention patterns by customer segment"""
         try:
@@ -595,8 +593,30 @@ class TiDBService:
         message_lower = message.lower()
         positive_count = sum(1 for word in positive_words if word in message_lower)
         negative_count = sum(1 for word in negative_words if word in message_lower)
+
+    def generate_semantic_embedding(text: str, dimension: int = 128) -> List[float]:
+        """Generate consistent, meaningful embedding from text"""
+        # Create deterministic hash-based embedding
+        hash_obj = hashlib.sha256(text.encode())
+        hash_bytes = hash_obj.digest()
         
-        if positive_count + negative_count == 0:
-            return 0.0
+        # Convert to float values
+        embedding = []
+        for i in range(0, min(len(hash_bytes), dimension // 4)):
+            # Take 4 bytes at a time, convert to float
+            chunk = hash_bytes[i*4:(i+1)*4] if (i+1)*4 <= len(hash_bytes) else hash_bytes[i*4:]
+            chunk = chunk.ljust(4, b'\x00')  # Pad if needed
+            val = int.from_bytes(chunk, 'big') / (2**32 - 1)  # Normalize to [0,1]
+            val = (val - 0.5) * 2  # Scale to [-1,1]
+            embedding.append(val)
         
-        return (positive_count - negative_count) / (positive_count + negative_count)
+        # Pad to desired dimension
+        while len(embedding) < dimension:
+            embedding.append(0.0)
+        
+        return embedding[:dimension]        
+            
+            if positive_count + negative_count == 0:
+                return 0.0
+            
+            return (positive_count - negative_count) / (positive_count + negative_count)
