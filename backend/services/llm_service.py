@@ -16,7 +16,7 @@ class LLMService:
         self.model = genai.GenerativeModel('gemini-2.5-flash')
         logger.info("Gemini initialized with automatic GCP authentication")
     
-    async def analyze_retention_strategy(self, customer_profile: Dict, 
+    async def analyze_enhanced_retention_strategy(self, customer_profile: Dict, 
                                                 agent_memories: List[Dict],
                                                 communications: List[Dict],
                                                 relationships: Dict,
