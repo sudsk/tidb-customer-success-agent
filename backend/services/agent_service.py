@@ -51,13 +51,8 @@ class AutonomousCustomerSuccessAgent:
         """Update churn predictions for all customers"""
         customers = self.db.query(Customer).all()
         updated_count = 0
-
-        # Skip demo customers to preserve their impressive churn probabilities
-        demo_customers = ["Marcus Crisis", "Diana Emergency", "Mike Rodriguez"]
-            
+        
         for customer in customers:
-            if customer.name in demo_customers:
-                continue  # Skip demo customers
             try:
                 # Get customer data for prediction
                 customer_data = {
@@ -723,64 +718,3 @@ class AutonomousCustomerSuccessAgent:
         except Exception as e:
             logger.error(f"Error in enhanced intervention for customer {customer.id}: {e}")
             return None
-    
-    async def demo_populate_sample_data(self):
-        """Populate sample data for demo purposes"""
-        
-        try:
-            # Add sample communications
-            sample_communications = [
-                {
-                    "customer_id": 1,  # Sarah Chen
-                    "message": "I'm having trouble with the billing system. It's confusing and I can't find what I need.",
-                    "comm_type": "email",
-                    "direction": "inbound"
-                },
-                {
-                    "customer_id": 1,
-                    "message": "Considering switching to a competitor. Your support response time is too slow.",
-                    "comm_type": "chat",
-                    "direction": "inbound"
-                },
-                {
-                    "customer_id": 2,  # Mike Rodriguez
-                    "message": "The new features are not intuitive. My team is struggling to adopt them.",
-                    "comm_type": "phone",
-                    "direction": "inbound"
-                }
-            ]
-            
-            for comm in sample_communications:
-                await self.tidb_service.store_customer_communication(**comm)
-            
-            # Add sample agent memories
-            sample_memories = [
-                {
-                    "customer_id": 1,
-                    "interaction_type": "churn_intervention",
-                    "context": {
-                        "segment": "smb",
-                        "issue": "billing_confusion",
-                        "strategy": "personalized_training"
-                    },
-                    "outcome": "successful"
-                },
-                {
-                    "customer_id": 2,
-                    "interaction_type": "churn_intervention", 
-                    "context": {
-                        "segment": "enterprise",
-                        "issue": "feature_adoption",
-                        "strategy": "dedicated_support"
-                    },
-                    "outcome": "successful"
-                }
-            ]
-            
-            for memory in sample_memories:
-                await self.tidb_service.store_agent_memory(**memory)
-            
-            logger.info("✅ Demo sample data populated")
-            
-        except Exception as e:
-            logger.error(f"Error populating demo data: {e}")
