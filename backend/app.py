@@ -503,7 +503,40 @@ async def get_realtime_stats(db: Session = Depends(get_db)):
             "agentMemories": 0,
             "communications": 0
         }
-
+        
+@app.post("/api/agent/reset-demo")
+async def reset_demo(db: Session = Depends(get_db)):
+    """Reset demo data for clean judge experience"""
+    try:
+        # Delete recent activities (last 3 hours to be safe)
+        recent_cutoff = datetime.now() - timedelta(hours=3)
+        deleted_activities = db.query(AgentActivity).filter(
+            AgentActivity.created_at >= recent_cutoff
+        ).delete()
+        
+        # Delete recent interventions  
+        deleted_interventions = db.query(ChurnIntervention).filter(
+            ChurnIntervention.created_at >= recent_cutoff
+        ).delete()
+        
+        db.commit()
+        
+        logger.info(f"🔄 Demo reset: removed {deleted_activities} activities, {deleted_interventions} interventions")
+        
+        return {
+            "status": "success", 
+            "message": "Demo reset - ready for fresh demonstration",
+            "cleared": {
+                "activities": deleted_activities,
+                "interventions": deleted_interventions
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Demo reset failed: {e}")
+        db.rollback()
+        return {"status": "error", "message": str(e)}
+        
 def generate_activity_title(activity: AgentActivity) -> str:
     """Generate display title based on activity type and metadata"""
     
