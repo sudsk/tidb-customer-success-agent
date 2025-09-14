@@ -594,6 +594,12 @@ class TiDBService:
         positive_count = sum(1 for word in positive_words if word in message_lower)
         negative_count = sum(1 for word in negative_words if word in message_lower)
 
+        if positive_count + negative_count == 0:
+            return 0.0
+            
+        return (positive_count - negative_count) / (positive_count + negative_count)
+
+
     def generate_semantic_embedding(text: str, dimension: int = 128) -> List[float]:
         """Generate consistent, meaningful embedding from text"""
         # Create deterministic hash-based embedding
@@ -614,9 +620,4 @@ class TiDBService:
         while len(embedding) < dimension:
             embedding.append(0.0)
         
-        return embedding[:dimension]        
-            
-            if positive_count + negative_count == 0:
-                return 0.0
-            
-            return (positive_count - negative_count) / (positive_count + negative_count)
+        return embedding[:dimension]   
