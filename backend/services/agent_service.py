@@ -5,7 +5,7 @@ from typing import List, Dict, Optional, Tuple
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from models.database import Customer, ChurnIntervention, AgentActivity, RetentionPattern
-from services.tidb_service import TiDBService
+from services.tidb_service import TiDBService, generate_semantic_embedding
 from services.llm_service import LLMService
 from services.notification_service import NotificationService
 from services.churn_predictor import ChurnPredictor
@@ -541,20 +541,40 @@ class AutonomousCustomerSuccessAgent:
         }
 
     async def execute_enhanced_intervention(self, customer: Customer) -> Optional[Dict]:
-        """Enhanced intervention with memory, full-text search, and graph RAG"""
+        """Enhanced intervention with working vector search and full workflow"""
         
         try:
-            # Step 1: Retrieve agent memory for similar cases
-            context_embedding = customer.behavior_embedding or [0.0] * 768
+            # Step 1: Generate meaningful embedding for customer
+            customer_text = f"company:{customer.company} segment:{self._get_customer_segment(customer)} plan:{customer.subscription_plan} usage:{customer.feature_usage_score} nps:{customer.nps_score} risk:{customer.churn_probability} revenue:{customer.annual_contract_value}"
+            context_embedding = generate_semantic_embedding(customer_text, dimension=768)
+            
+            logger.info(f"🧠 Generated semantic embedding for {customer.name} (dimension: {len(context_embedding)})")
+            
+            # Step 2: Use enhanced vector search to find similar successful cases
+            similar_cases = await self.tidb_service.find_similar_retention_cases(
+                customer_embedding=context_embedding,
+                customer_segment=self._get_customer_segment(customer),
+                churn_probability=customer.churn_probability
+            )
+            
+            logger.info(f"🎯 Vector search found {len(similar_cases)} similar successful cases")
+            for case in similar_cases[:3]:  # Log top 3 for demo purposes
+                similarity = case.get('similarity_score', 0)
+                success_rate = case.get('success_rate', 0)
+                logger.info(f"   ✓ Similar case: {case.get('pattern_name', 'Unknown')} (similarity: {similarity:.2f}, success: {success_rate:.0%})")
+            
+            # Step 3: Retrieve agent memory for similar cases (enhanced with embedding)
             agent_memories = await self.tidb_service.retrieve_agent_memory(
                 customer_id=customer.id,
                 interaction_type="churn_intervention",
                 context_embedding=context_embedding,
-                limit=3
+                limit=5
             )
             
-            # Step 2: Full-text search through customer communications
-            churn_factors = ["billing", "support", "feature", "competitor"]
+            logger.info(f"💾 Retrieved {len(agent_memories)} relevant agent memories")
+            
+            # Step 4: Full-text search through customer communications
+            churn_factors = ["billing", "support", "feature", "competitor", "pricing", "complexity"]
             communications = []
             for factor in churn_factors:
                 comms = await self.tidb_service.full_text_search_communications(
@@ -563,23 +583,30 @@ class AutonomousCustomerSuccessAgent:
                 )
                 communications.extend(comms)
             
-            # Step 3: Graph RAG - find relationship patterns
+            logger.info(f"📞 Analyzed {len(communications)} customer communications")
+            
+            # Step 5: Graph RAG - find relationship patterns (enhanced)
             relationships = await self.tidb_service.graph_rag_customer_relationships(customer.id)
             
-            # Step 4: Enhanced strategy selection using all data sources
+            logger.info(f"🔗 Found {len(relationships.get('successful_strategies', []))} relationship-based strategies")
+            
+            # Step 6: Enhanced LLM strategy selection using all TiDB data sources
             intervention_strategy = await self.llm_service.analyze_enhanced_retention_strategy(
                 customer_profile=self._build_customer_profile(customer),
                 agent_memories=agent_memories,
                 communications=communications,
                 relationships=relationships,
-                churn_probability=customer.churn_probability
+                churn_probability=customer.churn_probability,
+                similar_cases=similar_cases  # Add vector search results
             )
             
             if intervention_strategy['confidence'] < 0.6:
-                logger.info(f"Low confidence enhanced intervention for {customer.name}, skipping")
+                logger.info(f"Low confidence enhanced intervention for {customer.name} ({intervention_strategy['confidence']:.2f}), skipping")
                 return None
             
-            # Step 5: Execute intervention
+            logger.info(f"🚀 Selected strategy: {intervention_strategy['strategy']} with {intervention_strategy['confidence']:.2f} confidence")
+            
+            # Step 7: Create intervention record with enhanced metadata
             intervention = ChurnIntervention(
                 customer_id=customer.id,
                 intervention_type=intervention_strategy['intervention_type'],
@@ -591,36 +618,48 @@ class AutonomousCustomerSuccessAgent:
                 revenue_at_risk=customer.annual_contract_value,
                 estimated_retention_value=customer.annual_contract_value * intervention_strategy['expected_success_rate'],
                 status="executing",
-                execution_steps=json.dumps(intervention_strategy['execution_plan'])
+                execution_steps=json.dumps(intervention_strategy['execution_plan']),
+                outcome_details=json.dumps({
+                    "vector_search_results": len(similar_cases),
+                    "agent_memories_used": len(agent_memories),
+                    "communications_analyzed": len(communications),
+                    "relationship_strategies": len(relationships.get('successful_strategies', [])),
+                    "tidb_features_used": ["vector_search", "agent_memory", "full_text_search", "graph_rag"]
+                })
             )
             
             self.db.add(intervention)
             self.db.commit()
             self.db.refresh(intervention)
             
-            # Step 6: Store this intervention in agent memory
+            # Step 8: Store this intervention in agent memory with embedding
             memory_context = {
                 "customer_segment": self._get_customer_segment(customer),
                 "churn_probability": customer.churn_probability,
                 "intervention_type": intervention_strategy['intervention_type'],
                 "strategy": intervention_strategy['strategy'],
-                "confidence": intervention_strategy['confidence']
+                "confidence": intervention_strategy['confidence'],
+                "similar_cases_found": len(similar_cases),
+                "vector_search_enabled": True
             }
             
             await self.tidb_service.store_agent_memory(
                 customer_id=customer.id,
                 interaction_type="churn_intervention",
                 context=memory_context,
-                outcome="initiated"
+                outcome="initiated",
+                embedding=context_embedding  # Store the semantic embedding
             )
             
-            # Step 7: Store outbound communication
+            # Step 9: Store enhanced communication record
             await self.tidb_service.store_customer_communication(
                 customer_id=customer.id,
-                message=f"Initiated {intervention_strategy['strategy']} intervention for churn prevention",
+                message=f"Enhanced AI intervention initiated: {intervention_strategy['strategy']} (confidence: {intervention_strategy['confidence']:.2f}, vector matches: {len(similar_cases)})",
                 comm_type="system",
                 direction="outbound"
             )
+            
+            logger.info(f"✅ Enhanced intervention completed for {customer.name}")
             
             return {
                 "type": "enhanced_churn_intervention",
@@ -630,10 +669,19 @@ class AutonomousCustomerSuccessAgent:
                 "revenue_at_risk": customer.annual_contract_value,
                 "intervention": intervention_strategy['strategy'],
                 "confidence": intervention_strategy['confidence'],
+                "vector_search_results": len(similar_cases),
                 "agent_memories_used": len(agent_memories),
                 "communications_analyzed": len(communications),
                 "relationships_found": len(relationships.get('successful_strategies', [])),
-                "intervention_id": intervention.id
+                "intervention_id": intervention.id,
+                "tidb_features_demonstrated": {
+                    "vector_search": f"{len(similar_cases)} similar cases found",
+                    "agent_memory": f"{len(agent_memories)} memories retrieved", 
+                    "full_text_search": f"{len(communications)} communications analyzed",
+                    "graph_rag": f"{len(relationships.get('successful_strategies', []))} relationship patterns",
+                    "htap_processing": "Real-time + analytical processing combined",
+                    "json_storage": "Flexible metadata and context storage"
+                }
             }
             
         except Exception as e:
