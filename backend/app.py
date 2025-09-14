@@ -331,6 +331,13 @@ async def trigger_agent(db: Session = Depends(get_db)):
                     intervention_results.append(intervention_result)
                     
                     # Store customer save activity
+
+                    old_probability = customer.churn_probability
+                    new_probability = max(0.25, old_probability - 0.6)  # Reduce by 60%
+                    
+                    customer.churn_probability = new_probability
+                    customer.churn_risk_level = "low" if new_probability < 0.4 else "medium"
+
                     save_activity = AgentActivity(
                         customer_id=customer.id,
                         activity_type="customer_saved",
@@ -340,7 +347,7 @@ async def trigger_agent(db: Session = Depends(get_db)):
                             "customer_name": customer.name,
                             "revenue_saved": customer.annual_contract_value,
                             "risk_before": customer.churn_probability,
-                            "risk_after": 0.25,
+                            "risk_after": new_probability,
                             "intervention_type": intervention_result.get("intervention", "targeted_outreach")
                         }
                     )
