@@ -120,10 +120,38 @@ class AutonomousCustomerSuccessAgent:
                 customer_segment=self._get_customer_segment(customer),
                 churn_probability=customer.churn_probability
             )
+
+            # Step 1.5: GET THE ENHANCED DATA (ADD THIS)
+            # Generate embedding for enhanced analysis
+            customer_text = f"company:{customer.company} segment:{self._get_customer_segment(customer)} plan:{customer.subscription_plan}"
+            context_embedding = generate_semantic_embedding(customer_text, dimension=768)
+            
+            # Get enhanced data
+            agent_memories = await self.tidb_service.retrieve_agent_memory(
+                customer_id=customer.id,
+                interaction_type="churn_intervention",
+                context_embedding=context_embedding,
+                limit=5
+            )
+            
+            communications = []
+            churn_factors = ["billing", "support", "feature", "competitor", "pricing"]
+            for factor in churn_factors:
+                comms = await self.tidb_service.full_text_search_communications(
+                    customer_id=customer.id,
+                    search_terms=factor
+                )
+                communications.extend(comms)
+            
+            relationships = await self.tidb_service.graph_rag_customer_relationships(customer.id)
+                        
             
             # Step 2: Use LLM to choose optimal intervention strategy
-            intervention_strategy = await self.llm_service.analyze_retention_strategy(
+            intervention_strategy = await self.llm_service.analyze_enhanced_retention_strategy(
                 customer_profile=self._build_customer_profile(customer),
+                agent_memories=agent_memories,      # Now passing enhanced data
+                communications=communications,       # Now passing enhanced data
+                relationships=relationships,         # Now passing enhanced data                
                 churn_probability=customer.churn_probability,
                 similar_cases=similar_cases
             )
