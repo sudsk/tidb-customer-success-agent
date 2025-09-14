@@ -16,58 +16,71 @@ class LLMService:
         self.model = genai.GenerativeModel('gemini-2.5-flash')
         logger.info("Gemini initialized with automatic GCP authentication")
     
-    async def analyze_retention_strategy(self, customer_profile: Dict, churn_probability: float,
-                                       similar_cases: List[Dict]) -> Dict:
-        """Use Gemini to analyze retention strategy and choose optimal intervention"""
+    async def analyze_enhanced_retention_strategy(self, customer_profile: Dict, 
+                                                agent_memories: List[Dict],
+                                                communications: List[Dict],
+                                                relationships: Dict,
+                                                churn_probability: float,
+                                                similar_cases: List[Dict] = None) -> Dict:
+        """Enhanced retention strategy using agent memory, communications, graph RAG, and vector search"""
         
         prompt = f"""
-        As an autonomous customer success AI agent, analyze this customer churn situation:
-
+        As an autonomous customer success AI agent with advanced TiDB capabilities, 
+        determine the optimal retention strategy for this at-risk customer:
+    
         CUSTOMER PROFILE:
         - Name: {customer_profile['name']} ({customer_profile['company']})
         - Segment: {customer_profile['segment']}
-        - Plan: {customer_profile['subscription_plan']} 
-        - Monthly Revenue: ${customer_profile['monthly_revenue']:,.0f}
-        - Annual Contract Value: ${customer_profile['annual_contract_value']:,.0f}
-        - Days since signup: {customer_profile['days_since_signup']}
-        - Last login: {customer_profile['last_login_days_ago']} days ago
-        - Support tickets: {customer_profile['support_tickets_count']}
-        - Feature usage score: {customer_profile['feature_usage_score']:.2f}
-        - NPS score: {customer_profile['nps_score']}/10
-        - Payment delays: {customer_profile['payment_delays']}
-
-        CHURN RISK:
-        - Probability: {churn_probability:.1%}
-        - Risk Level: {customer_profile['churn_risk_level']}
-
-        SIMILAR SUCCESSFUL RETENTION CASES:
-        {json.dumps(similar_cases[:3], indent=2)}
-
-        Based on this analysis, determine the best intervention strategy.
-
-        Respond ONLY with valid JSON in this exact format:
+        - Annual Value: ${customer_profile['annual_contract_value']:,.0f}
+        - Churn Risk: {churn_probability:.1%}
+        - Usage Score: {customer_profile['feature_usage_score']:.2f}
+        - NPS: {customer_profile['nps_score']}/10
+    
+        VECTOR SEARCH RESULTS (TiDB Serverless):
+        {json.dumps(similar_cases[:3] if similar_cases else [], indent=2)}
+    
+        AGENT MEMORY (Past Successful Cases):
+        {json.dumps(agent_memories[:3], indent=2)}
+    
+        CUSTOMER COMMUNICATIONS ANALYSIS:
+        {json.dumps(communications[:5], indent=2)}
+    
+        RELATIONSHIP GRAPH ANALYSIS:
+        - Direct relationships: {len(relationships.get('direct_relationships', []))} customers
+        - Similar profiles: {len(relationships.get('similar_profile_customers', []))} customers  
+        - Successful strategies from similar customers: {relationships.get('successful_strategies', [])}
+    
+        Based on this comprehensive analysis using TiDB Serverless vector search, 
+        agent memory, full-text search, and graph relationships, determine the optimal intervention.
+    
+        Respond ONLY with valid JSON:
         {{
-            "trigger_reason": "specific reason for churn risk",
-            "intervention_type": "retention_outreach",
-            "strategy": "strategy_name",
-            "confidence": 0.85,
-            "expected_success_rate": 0.73,
+            "trigger_reason": "specific reason with vector search context",
+            "intervention_type": "enhanced_retention_outreach",
+            "strategy": "strategy_name_based_on_similar_cases",
+            "confidence": 0.87,
+            "expected_success_rate": 0.78,
             "execution_plan": [
-                {{"type": "personalized_outreach", "method": "email"}},
-                {{"type": "retention_offer", "offer_type": "discount", "discount_percent": 20}},
-                {{"type": "schedule_call", "urgency": "high"}}
+                {{"type": "vector_informed_outreach", "method": "email", "similar_case_confidence": 0.87}},
+                {{"type": "memory_enhanced_offer", "details": "based_on_successful_patterns"}},
+                {{"type": "graph_relationship_leverage", "urgency": "high"}}
             ],
-            "reasoning": "detailed explanation"
+            "reasoning": "detailed explanation using vector search, agent memory, and relationship insights",
+            "tidb_features_used": {{
+                "vector_search": true,
+                "agent_memory": true,
+                "full_text_search": true,
+                "graph_rag": true,
+                "htap_processing": true
+            }}
         }}
         """
         
         try:
             response = self.model.generate_content(prompt)
-            
-            # Parse JSON response
             response_text = response.text.strip()
             
-            # Clean up response to extract JSON
+            # Clean up response
             if "```json" in response_text:
                 json_start = response_text.find("```json") + 7
                 json_end = response_text.find("```", json_start)
@@ -79,18 +92,20 @@ class LLMService:
             
             result = json.loads(response_text)
             
-            # Validate required fields
-            required_fields = ["trigger_reason", "intervention_type", "strategy", "confidence", "expected_success_rate", "execution_plan"]
-            for field in required_fields:
-                if field not in result:
-                    raise KeyError(f"Missing required field: {field}")
+            # Enhance with vector search insights
+            if similar_cases:
+                result["vector_search_insights"] = {
+                    "cases_found": len(similar_cases),
+                    "top_similarity": max([case.get('similarity_score', 0) for case in similar_cases]) if similar_cases else 0,
+                    "avg_success_rate": sum([case.get('success_rate', 0) for case in similar_cases]) / len(similar_cases) if similar_cases else 0
+                }
             
             return result
             
         except Exception as e:
-            logger.error(f"Gemini analysis failed: {e}")
-            # Fallback decision making
-            return self._fallback_retention_strategy(customer_profile, churn_probability)
+            logger.error(f"Enhanced Gemini analysis failed: {e}")
+            # Enhanced fallback with vector search context
+            return self._enhanced_fallback_strategy(customer_profile, agent_memories, relationships, similar_cases)
     
     async def generate_retention_email(self, customer_name: str, company: str,
                                      churn_risk_factors: Dict, intervention_type: str) -> str:
