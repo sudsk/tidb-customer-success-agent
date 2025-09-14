@@ -54,7 +54,7 @@ class ChurnIntervention(Base):
     churn_probability_after = Column(Float)
     
     # Intervention details
-    trigger_reason = Column(String(255), nullable=False)
+    trigger_reason = Column(String(512), nullable=False)
     strategy_chosen = Column(String(100), nullable=False)
     confidence_score = Column(Float, nullable=False)
     expected_success_rate = Column(Float, nullable=False)
