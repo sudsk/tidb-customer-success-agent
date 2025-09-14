@@ -88,7 +88,7 @@ class AutonomousCustomerSuccessAgent:
         # Find customers with high churn probability who don't have recent interventions
         high_risk_customers = self.db.query(Customer).filter(
             Customer.churn_probability >= config.CHURN_THRESHOLD
-        ).all()
+        ).limit(3).all()  # ← LIMIT TO 3 CUSTOMERS PER CYCLE
         
         # Filter out customers who already have active interventions
         customers_needing_intervention = []
@@ -103,7 +103,7 @@ class AutonomousCustomerSuccessAgent:
                 customers_needing_intervention.append(customer)
         
         logger.info(f"Found {len(customers_needing_intervention)} customers needing intervention")
-        return customers_needing_intervention
+        return customers_needing_intervention[:3]  # Extra safety limit
     
     async def execute_autonomous_intervention(self, customer: Customer) -> Optional[Dict]:
         """Execute autonomous intervention for a high-risk customer"""
