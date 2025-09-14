@@ -640,7 +640,8 @@ class AutonomousCustomerSuccessAgent:
                 "strategy": intervention_strategy['strategy'],
                 "confidence": intervention_strategy['confidence'],
                 "similar_cases_found": len(similar_cases),
-                "vector_search_enabled": True
+                "vector_search_enabled": True,
+                "timestamp": datetime.now().isoformat()  # Convert to ISO string
             }
             
             await self.tidb_service.store_agent_memory(
