@@ -459,7 +459,7 @@ class TiDBService:
                     "interaction_type": row.interaction_type,
                     "context": json.loads(row.context),
                     "outcome": row.outcome,
-                    "timestamp": row.timestamp,
+                    "timestamp": row.timestamp.isoformat(),
                     "similarity_score": 0.8  # Mock similarity for now
                 })
             
@@ -530,7 +530,7 @@ class TiDBService:
                     "customer_id": row.customer_id,
                     "message_content": row.message_content,
                     "communication_type": row.communication_type,
-                    "timestamp": row.timestamp,
+                    "timestamp": row.timestamp.isoformat(),
                     "sentiment_score": row.sentiment_score,
                     "direction": row.communication_direction
                 })
