@@ -21,7 +21,8 @@ const ChurnDashboard = () => {
     communications: 0,
     highRiskCustomers: 0
   });
-
+  const [isResetting, setIsResetting] = useState(false);
+  
   useEffect(() => {
     fetchDashboardData();
     fetchRealTimeStats();
@@ -43,6 +44,26 @@ const ChurnDashboard = () => {
     return () => clearInterval(counterInterval);
   }, []);
 
+  const resetDemo = async () => {
+    try {
+      setIsResetting(true);
+      const response = await apiService.resetDemo();
+      
+      if (response.status === 'success') {
+        // Refresh dashboard to show clean state
+        await fetchDashboardData();
+        setSaveCounter(847); // Reset to baseline
+        setRecentSaves([]);
+        
+        console.log('✅ Demo reset successful:', response.message);
+      }
+    } catch (error) {
+      console.error('Failed to reset demo:', error);
+    } finally {
+      setIsResetting(false);
+    }
+  };
+  
   const fetchRealTimeStats = async () => {
     try {
       // Get real-time statistics from TiDB
@@ -146,7 +167,7 @@ const ChurnDashboard = () => {
             <button 
               className={`trigger-button ${isAgentRunning ? 'running' : ''}`}
               onClick={triggerAgent}
-              disabled={isAgentRunning}
+              disabled={isAgentRunning || isResetting}
             >
               {isAgentRunning ? (
                 <>
@@ -160,6 +181,23 @@ const ChurnDashboard = () => {
                 </>
               )}
             </button>
+            <button 
+              className="reset-button"
+              onClick={resetDemo}
+              disabled={isResetting || isAgentRunning}
+              title="Reset demo for fresh demonstration"
+            >
+              {isResetting ? (
+                <>
+                  <Loader className="spin" size={14} />
+                  Resetting...
+                </>
+              ) : (
+                <>
+                  🔄 Reset Demo
+                </>
+              )}
+            </button>              
           </div>
         </div>
       </header>
