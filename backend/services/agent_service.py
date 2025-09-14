@@ -54,12 +54,10 @@ class AutonomousCustomerSuccessAgent:
 
         # Skip demo customers to preserve their impressive churn probabilities
         demo_customers = ["Marcus Crisis", "Diana Emergency", "Mike Rodriguez"]
-        
+            
         for customer in customers:
             if customer.name in demo_customers:
                 continue  # Skip demo customers
-            
-        for customer in customers:
             try:
                 # Get customer data for prediction
                 customer_data = {
