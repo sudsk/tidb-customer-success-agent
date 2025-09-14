@@ -56,5 +56,20 @@ export const apiService = {
   async getRealTimeStats() {
     const response = await axios.get(`${API_BASE}/realtime/stats`);
     return response.data;
+  },
+
+  async startAgentCycle() {
+    const response = await axios.post(`${API_BASE}/agent/start-cycle`);
+    return response.data;
+  },
+
+  async stopAgentCycle() {
+    const response = await axios.post(`${API_BASE}/agent/stop-cycle`);
+    return response.data;
+  },
+
+  async getAgentCycleStatus() {
+    const response = await axios.get(`${API_BASE}/agent/cycle-status`);
+    return response.data;
   }
 };
