@@ -506,32 +506,32 @@ async def get_realtime_stats(db: Session = Depends(get_db)):
         
 @app.post("/api/agent/reset-demo")
 async def reset_demo(db: Session = Depends(get_db)):
-    """Reset demo data for clean judge experience"""
+    """Complete demo reset - truncate and reload all data"""
     try:
-        # Delete recent activities (last 3 hours to be safe)
-        recent_cutoff = datetime.now() - timedelta(hours=3)
-        deleted_activities = db.query(AgentActivity).filter(
-            AgentActivity.created_at >= recent_cutoff
-        ).delete()
+        # Import the comprehensive reset function
+        from utils.mock_data import full_demo_reset
         
-        # Delete recent interventions  
-        deleted_interventions = db.query(ChurnIntervention).filter(
-            ChurnIntervention.created_at >= recent_cutoff
-        ).delete()
+        logger.info("🔄 Starting complete demo reset...")
         
-        db.commit()
+        # Execute complete data reset
+        result = await full_demo_reset(db)
         
-        logger.info(f"🔄 Demo reset: removed {deleted_activities} activities, {deleted_interventions} interventions")
-        
-        return {
-            "status": "success", 
-            "message": "Demo reset - ready for fresh demonstration",
-            "cleared": {
-                "activities": deleted_activities,
-                "interventions": deleted_interventions
+        if result["status"] == "success":
+            logger.info(f"✅ Demo reset complete: {result['customers_loaded']} customers, {result['patterns_loaded']} patterns, {result['memories_loaded']} memories, {result['communications_loaded']} communications")
+            
+            return {
+                "status": "success",
+                "message": "Complete demo reset successful - all data restored to original state",
+                "data_loaded": {
+                    "customers": result["customers_loaded"],
+                    "retention_patterns": result["patterns_loaded"], 
+                    "agent_memories": result["memories_loaded"],
+                    "communications": result["communications_loaded"]
+                }
             }
-        }
-        
+        else:
+            return result
+            
     except Exception as e:
         logger.error(f"Demo reset failed: {e}")
         db.rollback()
