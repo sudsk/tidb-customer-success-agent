@@ -28,6 +28,8 @@ logging.getLogger('sqlalchemy.orm').setLevel(logging.WARNING)
 agent_task = None
 latest_activities = []
 latest_analytics = {}
+agent_cycle_running = False
+agent_cycle_status = "stopped"  # stopped, starting, running, stopping
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -42,15 +44,20 @@ async def lifespan(app: FastAPI):
     # Initialize enhanced TiDB features
     from utils.mock_data import create_tidb_enhanced_tables
     await create_tidb_enhanced_tables(db)
+
+    # Don't auto-start the agent - let UI control it
+    logger.info("✅ Agent ready - waiting for UI control")
     
     # Start background agent
-    global agent_task
-    agent_task = asyncio.create_task(run_agent_loop())
+    #global agent_task
+    #agent_task = asyncio.create_task(run_agent_loop())
     
     yield
     
     # Shutdown
+    global agent_task, agent_cycle_running
     if agent_task:
+        agent_cycle_running = False
         agent_task.cancel()
     logger.info("Agent stopped")
 
@@ -503,7 +510,136 @@ async def get_realtime_stats(db: Session = Depends(get_db)):
             "agentMemories": 0,
             "communications": 0
         }
+
+@app.post("/api/agent/start-cycle")
+async def start_agent_cycle():
+    """Start the continuous agent monitoring cycle"""
+    global agent_task, agent_cycle_running, agent_cycle_status
+    
+    if agent_cycle_running:
+        return {
+            "status": "already_running",
+            "message": "Agent cycle is already running"
+        }
+    
+    try:
+        agent_cycle_status = "starting"
+        logger.info("🤖 Starting agent monitoring cycle...")
         
+        # Start the agent monitoring task
+        agent_task = asyncio.create_task(run_controlled_agent_loop())
+        agent_cycle_running = True
+        agent_cycle_status = "running"
+        
+        return {
+            "status": "success",
+            "message": "Agent monitoring cycle started",
+            "cycle_status": agent_cycle_status
+        }
+        
+    except Exception as e:
+        agent_cycle_status = "stopped"
+        agent_cycle_running = False
+        logger.error(f"Failed to start agent cycle: {e}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+@app.post("/api/agent/stop-cycle")
+async def stop_agent_cycle():
+    """Stop the continuous agent monitoring cycle"""
+    global agent_task, agent_cycle_running, agent_cycle_status
+    
+    if not agent_cycle_running:
+        return {
+            "status": "not_running",
+            "message": "Agent cycle is not currently running"
+        }
+    
+    try:
+        agent_cycle_status = "stopping"
+        logger.info("⏹️ Stopping agent monitoring cycle...")
+        
+        # Cancel the agent task
+        if agent_task:
+            agent_task.cancel()
+            try:
+                await agent_task
+            except asyncio.CancelledError:
+                pass
+        
+        agent_cycle_running = False
+        agent_cycle_status = "stopped"
+        agent_task = None
+        
+        return {
+            "status": "success",
+            "message": "Agent monitoring cycle stopped",
+            "cycle_status": agent_cycle_status
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to stop agent cycle: {e}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+@app.get("/api/agent/cycle-status")
+async def get_agent_cycle_status():
+    """Get current agent cycle status"""
+    global agent_cycle_running, agent_cycle_status
+    
+    return {
+        "status": "success",
+        "cycle_running": agent_cycle_running,
+        "cycle_status": agent_cycle_status,
+        "uptime_seconds": 0 if not agent_cycle_running else 300  # Mock uptime
+    }
+
+async def run_controlled_agent_loop():
+    """Controlled agent loop that can be started/stopped from UI"""
+    global agent_cycle_running, latest_activities, latest_analytics
+    
+    logger.info("🤖 Controlled agent monitoring loop started")
+    
+    try:
+        while agent_cycle_running:
+            try:
+                db = next(get_db())
+                agent = AutonomousCustomerSuccessAgent(db)
+                
+                # Process customer health checks (limited for performance)
+                activities = await agent.process_customer_health_check()
+                
+                # Update global state
+                if activities:
+                    latest_activities.extend(activities[-5:])  # Add latest 5
+                    latest_activities = latest_activities[-25:]  # Keep last 25
+                    
+                    logger.info(f"🤖 Agent cycle: {len(activities)} new interventions")
+                
+                # Update analytics
+                tidb_service = TiDBService(db)
+                latest_analytics = await tidb_service.get_churn_analytics()
+                
+            except Exception as e:
+                logger.error(f"Error in controlled agent loop: {e}")
+            
+            # Wait 20 seconds before next cycle (faster than background loop)
+            await asyncio.sleep(20)
+            
+    except asyncio.CancelledError:
+        logger.info("🛑 Controlled agent loop cancelled")
+        raise
+    except Exception as e:
+        logger.error(f"Controlled agent loop error: {e}")
+    finally:
+        agent_cycle_running = False
+        agent_cycle_status = "stopped"
+        logger.info("🏁 Controlled agent monitoring loop stopped")
+
 @app.post("/api/agent/reset-demo")
 async def reset_demo(db: Session = Depends(get_db)):
     """Complete demo reset - truncate and reload all data"""
