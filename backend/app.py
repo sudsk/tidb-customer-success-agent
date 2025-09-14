@@ -244,7 +244,7 @@ async def trigger_agent(db: Session = Depends(get_db)):
     """Enhanced agent trigger that uses real TiDB data and persists activities"""
     
     logger.info("🔥 Agent trigger endpoint called")
-    
+ 
     try:
         # Get real data from TiDB
         total_customers = db.query(Customer).count()
