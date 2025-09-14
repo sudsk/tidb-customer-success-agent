@@ -49,22 +49,7 @@ def generate_semantic_embedding(text: str, dimension: int = 768) -> List[float]:
         embedding = [x / magnitude for x in embedding]
     
     return embedding
-
-# Needed for fallback similarity calculation:
-def calculate_cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
-    """Calculate cosine similarity between two vectors"""
-    if len(vec1) != len(vec2):
-        return 0.0
-    
-    dot_product = sum(a * b for a, b in zip(vec1, vec2))
-    magnitude_a = math.sqrt(sum(a * a for a in vec1))
-    magnitude_b = math.sqrt(sum(b * b for b in vec2))
-    
-    if magnitude_a == 0 or magnitude_b == 0:
-        return 0.0
-    
-    return dot_product / (magnitude_a * magnitude_b)
-    
+ 
 class TiDBService:
     def __init__(self, db: Session):
         self.db = db
