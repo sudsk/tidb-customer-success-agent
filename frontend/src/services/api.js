@@ -42,6 +42,11 @@ export const apiService = {
     return response.data;
   },
 
+  async resetDemo() {
+    const response = await axios.post(`${API_BASE}/agent/reset-demo`);
+    return response.data;
+  },  
+
   // Real-time data endpoints
   async getRealTimeActivities() {
     const response = await axios.get(`${API_BASE}/activities/real-time`);
