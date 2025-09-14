@@ -61,9 +61,9 @@ class LLMService:
     
         Respond ONLY with valid JSON:
         {{
-            "trigger_reason": "specific reason with vector search context",
+            "trigger_reason": "specific reason with vector search context (max 200 chars)",
             "intervention_type": "enhanced_retention_outreach",
-            "strategy": "strategy_name_based_on_similar_cases",
+            "strategy": "short_strategy_name_max_80_chars", 
             "confidence": 0.87,
             "expected_success_rate": 0.78,
             "execution_plan": [
