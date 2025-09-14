@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
     
     # Start background agent
     global agent_task
-    agent_task = asyncio.create_task(run_agent_loop())
+    #agent_task = asyncio.create_task(run_agent_loop())
     
     yield
     
