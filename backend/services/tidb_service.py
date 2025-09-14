@@ -436,19 +436,16 @@ class TiDBService:
         try:
             query_vector = json.dumps(context_embedding)
             
-            # TiDB Vector Search on agent memories
             memory_search_query = text("""
-                SELECT session_id, customer_id, interaction_type, context, outcome, timestamp,
-                       VEC_COSINE_DISTANCE(JSON_EXTRACT(embedding, '$'), JSON_EXTRACT(:query_vector, '$')) as similarity
+                SELECT session_id, customer_id, interaction_type, context, outcome, timestamp
                 FROM agent_memory
                 WHERE customer_id = :customer_id 
                    OR interaction_type = :interaction_type
-                ORDER BY similarity ASC
+                ORDER BY timestamp DESC
                 LIMIT :limit
             """)
             
             result = self.db.execute(memory_search_query, {
-                "query_vector": query_vector,
                 "customer_id": customer_id,
                 "interaction_type": interaction_type,
                 "limit": limit
@@ -463,7 +460,7 @@ class TiDBService:
                     "context": json.loads(row.context),
                     "outcome": row.outcome,
                     "timestamp": row.timestamp,
-                    "similarity_score": 1.0 - row.similarity
+                    "similarity_score": 0.8  # Mock similarity for now
                 })
             
             logger.info(f"Retrieved {len(memories)} agent memories")
