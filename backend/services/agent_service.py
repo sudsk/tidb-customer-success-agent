@@ -114,6 +114,7 @@ class AutonomousCustomerSuccessAgent:
         """Execute autonomous intervention for a high-risk customer"""
         
         try:
+            logger.info(f"before step 1")
             # Step 1: Find similar successful retention cases using TiDB vector search
             similar_cases = await self.tidb_service.find_similar_retention_cases(
                 customer_embedding=customer.behavior_embedding,
@@ -121,6 +122,7 @@ class AutonomousCustomerSuccessAgent:
                 churn_probability=customer.churn_probability
             )
 
+            logger.info(f"before step 1.5")
             # Step 1.5: GET THE ENHANCED DATA (ADD THIS)
             # Generate embedding for enhanced analysis
             customer_text = f"company:{customer.company} segment:{self._get_customer_segment(customer)} plan:{customer.subscription_plan}"
@@ -145,7 +147,7 @@ class AutonomousCustomerSuccessAgent:
             
             relationships = await self.tidb_service.graph_rag_customer_relationships(customer.id)
                         
-            
+            logger.info(f"before step 2")
             # Step 2: Use LLM to choose optimal intervention strategy
             intervention_strategy = await self.llm_service.analyze_enhanced_retention_strategy(
                 customer_profile=self._build_customer_profile(customer),
@@ -159,7 +161,8 @@ class AutonomousCustomerSuccessAgent:
             if intervention_strategy['confidence'] < 0.6:
                 logger.info(f"Low confidence intervention for {customer.name}, skipping")
                 return None
-            
+
+            logger.info(f"before step 3")
             # Step 3: Create intervention record
             intervention = ChurnIntervention(
                 customer_id=customer.id,
@@ -178,10 +181,12 @@ class AutonomousCustomerSuccessAgent:
             self.db.add(intervention)
             self.db.commit()
             self.db.refresh(intervention)
-            
+
+            logger.info(f"before step 4")
             # Step 4: Execute intervention with self-correction
             execution_result = await self.execute_intervention_with_correction(intervention, customer)
-            
+
+            logger.info(f"before step 5")
             # Step 5: Log activity
             activity = AgentActivity(
                 intervention_id=intervention.id,
@@ -199,7 +204,8 @@ class AutonomousCustomerSuccessAgent:
             
             self.db.add(activity)
             self.db.commit()
-            
+
+            logger.info(f"before return")
             return {
                 "type": "churn_intervention",
                 "customer": customer.name,
