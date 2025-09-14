@@ -404,7 +404,7 @@ class TiDBService:
             }
             
     async def store_agent_memory(self, customer_id: int, interaction_type: str, 
-                               context: Dict, outcome: str) -> str:
+                               context: Dict, outcome: str, embedding: List[float] = None) -> str:
         """Store agent memory for persistent learning"""
         session_id = str(uuid.uuid4())
         
