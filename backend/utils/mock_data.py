@@ -4,6 +4,7 @@ import random
 import numpy as np
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
+from sqlalchemy import text 
 from models.database import Customer, RetentionPattern, ChurnIntervention
 import logging
 
