@@ -215,7 +215,6 @@ curl -X POST https://your-backend-url/api/agent/trigger
 
 ---
 
----
 
 ## 🛠️ Troubleshooting
 
@@ -286,7 +285,7 @@ This project showcases the future of autonomous customer success. Built with ❤
 
 ## 📄 License
 
-MIT License - Open source customer success innovation
+MIT License - Open source 
 
 ---
 
@@ -294,15 +293,3 @@ MIT License - Open source customer success innovation
 
 **The future of customer success is autonomous, intelligent, and powered by TiDB Serverless.**
 
-### **Quick Start Commands:**
-```bash
-# Deploy to Cloud Run
-gcloud run deploy customer-success-backend --source=backend --region=us-central1
-gcloud run deploy customer-success-frontend --source=frontend --region=us-central1
-
-# Or run locally
-cd backend && python app.py
-cd frontend && npm start
-```
-
-**🎯 Perfect for TiDB Hackathon - showcasing HTAP, Vector Search, JSON storage, Auto-scaling, and Real-time AI!**
