@@ -6,8 +6,8 @@ An autonomous AI agent that prevents customer churn through intelligent interven
 
 ## 🚀 Live Demo
 
-**Frontend**: https://tidb-customer-success-agent.run.app  
-**Backend API**: https://tidb-customer-success-agent.run.app  
+**Frontend**: [https://tidb-customer-success-agent.run.app](https://customer-success-frontend-965322502870.europe-west2.run.app/)  
+**Backend API**: <>  
 
 Click **"Save Customers Now"** to watch the agent rescue customers in real-time!
 
@@ -37,11 +37,11 @@ Click **"Save Customers Now"** to watch the agent rescue customers in real-time!
 
 ## 📊 Business Impact
 
-- **xxx Customers Saved** from churn situations
-- **xxx Monthly Revenue** retained through interventions  
-- **xxx Churn Reduction** (from 8.2% to 2.7%)
-- **xxx Agent Autonomy** (minimal human intervention required)
-- **xxms Average** TiDB vector search response time
+- **Customers Saved** from churn situations
+- **Monthly Revenue** retained through interventions  
+- **% Churn Reduction** (from 8.2% to 2.7%)
+- **% Agent Autonomy** (minimal human intervention required)
+- **ms Average** TiDB vector search response time
 
 ## 🛠️ Technology Architecture
 
@@ -73,7 +73,6 @@ Click **"Save Customers Now"** to watch the agent rescue customers in real-time!
 - Google Cloud Project with billing enabled
 - gcloud CLI installed (`gcloud --version`)
 - TiDB Serverless cluster created
-- Gemini API key from Google AI Studio
 
 #### **Quick Deploy Commands**
 ```bash
@@ -88,7 +87,7 @@ gcloud run deploy customer-success-backend \
   --source=. \
   --region=us-central1 \
   --allow-unauthenticated \
-  --set-env-vars="TIDB_HOST=your-host,TIDB_USER=your-user,TIDB_PASSWORD=your-password,TIDB_DATABASE=customer_success_agent,GEMINI_API_KEY=your-gemini-key" \
+  --set-env-vars="TIDB_HOST=your-host,TIDB_USER=your-user,TIDB_PASSWORD=your-password,TIDB_DATABASE=customer_success_agent,GCP_PROJECT_ID=your-gcp-project" \
   --memory=2Gi \
   --cpu=2 \
   --timeout=300
@@ -109,13 +108,6 @@ echo "✅ Frontend: $(gcloud run services describe customer-success-frontend --r
 echo "✅ Backend: $BACKEND_URL"
 ```
 
-#### **Cloud Run Benefits**
-- ✅ **Auto-scaling** from 0 to 1000+ instances
-- ✅ **Built-in HTTPS** and global load balancing
-- ✅ **Pay-per-use** pricing model
-- ✅ **Zero server management**
-- ✅ **Integrated with Google AI services**
-
 ---
 
 ### **💻 Option 2: Local Development**
@@ -124,7 +116,7 @@ echo "✅ Backend: $BACKEND_URL"
 - Python 3.9+
 - Node.js 16+
 - TiDB Serverless account ([Sign up here](https://tidbcloud.com/))
-- Gemini API key
+- Vertex AI Gemini LLM
 
 #### **1. Clone Repository**
 ```bash
@@ -148,8 +140,8 @@ cp .env.example .env
 # TIDB_HOST=gateway01.us-west-2.prod.aws.tidbcloud.com
 # TIDB_USER=your_username
 # TIDB_PASSWORD=your_password
-# TIDB_DATABASE=customer_success_agent
-# GEMINI_API_KEY=your-gemini-key
+# TIDB_DATABASE=your-database
+# GCP_PROJECT_ID=your-project-id
 
 # Run backend
 python app.py
@@ -186,13 +178,11 @@ TIDB_HOST=gateway01.us-central1.prod.aws.tidbcloud.com
 TIDB_PORT=4000
 TIDB_USER=your_username
 TIDB_PASSWORD=your_password
-TIDB_DATABASE=customer_success_agent
+TIDB_DATABASE=your-database
 
 # AI Services
-GEMINI_API_KEY=your_gemini_api_key
-
-# Optional: GCP Project for additional services
 GCP_PROJECT_ID=your-project-id
+
 ```
 
 ### **Frontend Environment Variables**
@@ -224,112 +214,6 @@ curl -X POST https://your-backend-url/api/agent/trigger
 - [ ] No CORS errors in browser console
 
 ---
-
-## 🎯 Key Capabilities
-
-### **Autonomous Churn Detection**
-- Real-time monitoring of customer health scores using TiDB HTAP
-- ML-powered churn probability prediction with 94.7% accuracy
-- Risk level categorization (low/medium/high/critical)
-
-### **TiDB-Powered Intelligence**  
-- **Vector Search**: Similarity matching for retention strategies (768-dimensional embeddings)
-- **HTAP Processing**: Real-time customer behavior + historical pattern analysis
-- **JSON Storage**: Flexible customer metadata and agent activity tracking
-- **Full-Text Search**: Communication content analysis and sentiment detection
-- **Auto-Scaling**: Serverless infrastructure handling 10K+ customers
-
-### **Multi-Channel Interventions**
-- Personalized outreach (email, phone, Slack)
-- Retention offers based on similar successful cases
-- Feature demos and success call scheduling
-- Payment plan alternatives and discount offers
-
-### **Self-Correction Capabilities**
-- Email bounce detection → automatic phone retry
-- Failed discount → payment plan alternative  
-- Rejected call → feature demo pivot
-- All corrections logged for continuous learning
-
-### **Continuous Learning with TiDB**
-- Success/failure pattern recognition stored in TiDB
-- Vector embedding updates based on outcomes
-- Strategy effectiveness tracking via time-series analytics
-- Customer segment optimization using HTAP processing
-
----
-
-## 📈 TiDB Serverless Integration Deep Dive
-
-### **HTAP Real-Time Analytics**
-```python
-# Simultaneous transactional and analytical processing
-analytics = await tidb_service.get_churn_analytics()
-# Processes 1.2M operations/second combining:
-# - Real-time customer behavior (TP)  
-# - Historical retention patterns (AP)
-```
-
-### **Vector Search Implementation**
-```python
-# Find similar successful retention cases
-similar_cases = await tidb_service.find_similar_retention_cases(
-    customer_embedding=customer.behavior_embedding,
-    customer_segment=customer.segment,
-    churn_probability=customer.churn_probability
-)
-```
-
-### **JSON-Native Operations**
-```python
-# Flexible metadata storage and querying
-activity_metadata = {
-    "customer_name": customer.name,
-    "churn_probability": customer.churn_probability,
-    "intervention_strategies": ["email", "call", "demo"],
-    "success_indicators": {...}
-}
-```
-
-### **Auto-Scaling Benefits**
-- Handles 10K+ customers without manual scaling
-- Automatic resource adjustment during peak analysis
-- Cost-effective scaling based on actual usage
-- Zero maintenance database operations
-
----
-
-## 🔥 Demo Highlights
-
-### **Real-Time Customer Rescues**
-Watch as the agent:
-- Detects Sarah Chen at 89% churn risk ($14.4K at stake)
-- Uses TiDB vector search to find similar successful cases (47ms response)
-- Executes personalized intervention strategy
-- Self-corrects when email fails → phone call succeeds
-- Updates retention patterns for future learning
-
-### **Live Business Impact Dashboard**
-- Customer save counter incrementing in real-time
-- $2.3M revenue retention tracking
-- Churn risk distribution with TiDB analytics
-- Agent performance metrics and autonomy level
-
----
-
-## 📱 API Endpoints
-
-### **Core Agent APIs**
-- `GET /api/dashboard/metrics` - Real-time business metrics
-- `GET /api/customers/at-risk` - High-risk customer list
-- `POST /api/agent/trigger` - Manual agent intervention
-- `GET /api/analytics/churn` - TiDB-powered churn analytics
-- `GET /api/interventions/recent` - Recent rescue operations
-
-### **Live Demo APIs**
-- `GET /api/feed/realtime` - Real-time activity stream
-- `GET /api/activities/real-time` - Recent agent actions
-- `GET /api/realtime/stats` - Live system statistics
 
 ---
 
@@ -395,7 +279,7 @@ This project showcases the future of autonomous customer success. Built with ❤
 - **Backend**: FastAPI, SQLAlchemy, Google Gemini, Scikit-learn
 - **Database**: TiDB Serverless with Vector Search, HTAP, JSON storage
 - **Deployment**: Google Cloud Run (Frontend + Backend)
-- **AI/ML**: Google Gemini API, Custom churn prediction model
+- **AI/ML**: Google Vertex AI Gemini LLM, Custom churn prediction model
 - **Monitoring**: Real-time agent performance tracking
 
 ---
