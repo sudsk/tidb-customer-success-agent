@@ -39,9 +39,9 @@ Click **"Save Customers Now"** to watch the agent rescue customers in real-time!
 
 - **Customers Saved** from churn situations
 - **Monthly Revenue** retained through interventions  
-- **% Churn Reduction** (from 8.2% to 2.7%)
+- **% Churn Reduction** (e.g. from 8.2% to 2.7%)
 - **% Agent Autonomy** (minimal human intervention required)
-- **ms Average** TiDB vector search response time
+- **Average ms** TiDB vector search response time
 
 ## 🛠️ Technology Architecture
 
